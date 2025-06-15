@@ -88,7 +88,8 @@ class TestCmd:
             "I m'encanta aquesta ciutat tant meva." == text_array[2]
         ), "updated translated text 2"
 
-    @pytest.mark.parametrize("tts_engine", ["edge", "mms"])
+    # Cannot do mms due to lack of disk space
+    @pytest.mark.parametrize("tts_engine", ["edge"])
     def test_translations_with_tts(self, tts_engine):
         full_path = os.path.realpath(__file__)
         path, _ = os.path.split(full_path)
