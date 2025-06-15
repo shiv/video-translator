@@ -42,6 +42,7 @@ jobs:
     environment: CI/CD
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
          os: [ubuntu-latest, macos-latest, windows-latest]
          python-version: [3.10.15, 3.11, 3.12]
@@ -73,6 +74,7 @@ jobs:
       run: |
         sudo apt update
         sudo apt install -y ffmpeg espeak-ng
+        sudo apt-get autoremove -y
         sudo apt-get clean
 
     - name: Install dependencies on macOS
