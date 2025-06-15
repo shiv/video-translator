@@ -11,6 +11,9 @@ on:
     branches:
       - "*"
 
+  schedule:
+    - cron: "0 0 * * 0"
+
 jobs:
   check-code-format:
     runs-on: ubuntu-latest
