@@ -74,6 +74,7 @@ jobs:
       run: |
         sudo apt update
         sudo apt install -y ffmpeg espeak-ng
+        sudo apt-get remove -y --purge $(dpkg -l | grep -E 'java' | awk '{print $2}')
         sudo apt-get autoremove -y
         sudo apt-get clean
 
