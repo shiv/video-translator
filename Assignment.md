@@ -63,6 +63,23 @@ Design and implement a backend service that enables users to upload a video, pro
 * Basic frontend to upload videos and download the translated video.
 
 
+## Video Dubbing Process Pipeline
+
+```mermaid
+flowchart TD
+    A[Input Video File] --> B[Initialization & Validation]
+    B --> C[Video/Audio Separation]
+    C --> D[Speaker Diarization with PyAnnote]
+    D --> E[Audio Segmentation]
+    E --> F[Speech-to-Text Transcription]
+    F --> G[Gender Detection]
+    G --> H[Text Translation]
+    H --> I[Voice Assignment]
+    I --> J[Text-to-Speech Synthesis]
+    J --> K[Audio Timeline Assembly]
+    K --> L[Video/Audio Combination]
+    L --> M[Final Output Files]
+```
 
 
 
