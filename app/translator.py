@@ -197,7 +197,7 @@ def _get_openai_key():
     log_error_and_exit(msg, ExitCode.NO_OPENAI_KEY)
 
 
-def main():
+def translate_video():
 
     args = CommandLine.read_parameters()
     
@@ -293,4 +293,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    translate_video()

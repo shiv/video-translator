@@ -46,7 +46,7 @@ setup(
     },
     entry_points={
         "console_scripts": [
-            "open-dubbing=app.main:main",
+            "open-dubbing=app.translator:translate_video",
         ]
     },
     python_requires='>=3.10'

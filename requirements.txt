@@ -10,3 +10,5 @@ transformers >= 4.40, <= 4.45.2
 spacy[ja] == 3.7.6
 
 iso639-lang == 2.3.0
+
+openai >= 1.80.0
