@@ -21,7 +21,7 @@ from urllib.parse import urljoin
 import requests
 
 from open_dubbing import logger
-from open_dubbing.text_to_speech import TextToSpeech, Voice
+from open_dubbing.tts.text_to_speech import TextToSpeech, Voice
 
 
 class TextToSpeechAPI(TextToSpeech):

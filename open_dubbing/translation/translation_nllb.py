@@ -15,7 +15,7 @@
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer, pipeline
 
 from open_dubbing import logger
-from open_dubbing.translation import Translation
+from open_dubbing.translation.translation import Translation
 
 
 class TranslationNLLB(Translation):
