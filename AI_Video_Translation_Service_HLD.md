@@ -78,7 +78,7 @@ graph TB
     
     subgraph "Storage Layer"
         S3[AWS S3 Buckets]
-        RDS[PostgreSQL RDS]
+        RDS[SQLite RDS]
         REDIS[Redis ElastiCache]
     end
     
@@ -131,15 +131,11 @@ graph TB
 app/
 ├── main.py                 # FastAPI app initialization
 ├── api/
-│   ├── routes/
-│   │   ├── upload.py       # Video upload endpoints
-│   │   ├── jobs.py         # Job management endpoints
-│   │   ├── download.py     # Download endpoints
-│   │   └── preview.py      # Preview endpoints
-│   └── middleware/
-│       ├── cors.py         # CORS handling
-│       ├── auth.py         # Authentication
-│       └── rate_limit.py   # Rate limiting
+│   └── routes/
+│       ├── upload.py       # Video upload endpoints
+│       ├── jobs.py         # Job management endpoints
+│       ├── download.py     # Download endpoints
+│       └── preview.py      # Preview endpoints
 ├── services/
 │   ├── ai_services/        # AI service implementations
 │   ├── processing/         # Video processing logic
@@ -426,7 +422,7 @@ class AIServiceFactory:
   - Output videos bucket
   - Temporary processing files
 
-- **PostgreSQL (RDS)**: Relational database
+- **SQLite (RDS)**: Relational database
   - Job metadata and status
   - User information
   - Processing history
@@ -1074,7 +1070,7 @@ async def websocket_progress(websocket: WebSocket, job_id: str):
 
 ## Database Schema
 
-### PostgreSQL Schema Design
+### SQLite Schema Design
 
 #### Jobs Table
 ```sql
@@ -1294,7 +1290,7 @@ CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
         }
       ],
       "environment": [
-        {"name": "DATABASE_URL", "value": "postgresql://user:pass@rds-endpoint:5432/videodb"},
+        {"name": "DATABASE_URL", "value": ""},
         {"name": "REDIS_URL", "value": "redis://elasticache-endpoint:6379"},
         {"name": "S3_INPUT_BUCKET", "value": "video-translation-input"},
         {"name": "S3_OUTPUT_BUCKET", "value": "video-translation-output"},
@@ -1426,34 +1422,6 @@ class ModelCache:
                 torch_dtype=torch.float16
             )
         return model
-```
-
-#### 3. Database Connection Pooling
-```python
-class DatabasePool:
-    """
-    Connection pool for PostgreSQL database
-    """
-    def __init__(self):
-        self.pool = None
-    
-    async def initialize(self):
-        """Initialize connection pool"""
-        self.pool = await asyncpg.create_pool(
-            host=settings.DB_HOST,
-            port=settings.DB_PORT,
-            user=settings.DB_USER,
-            password=settings.DB_PASSWORD,
-            database=settings.DB_NAME,
-            min_size=5,
-            max_size=20,
-            command_timeout=60
-        )
-    
-    async def execute_query(self, query: str, *args):
-        """Execute query using connection pool"""
-        async with self.pool.acquire() as connection:
-            return await connection.fetch(query, *args)
 ```
 
 ## Conclusion
