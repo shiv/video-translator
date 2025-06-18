@@ -51,7 +51,6 @@ class TextToSpeechAPI(TextToSpeech):
             voice = Voice(
                 name=server_voice["id"],
                 gender=server_voice["gender"],
-                region=server_voice["region"],
             )
             voices.append(voice)
 

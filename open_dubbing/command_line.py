@@ -148,12 +148,6 @@ class CommandLine:
         )
 
         parser.add_argument(
-            "--target_language_region",
-            default="",
-            help="For some TTS you can specify the region of the language. For example, 'ES' will indicate accent from Spain.",
-        )
-
-        parser.add_argument(
             "--log_level",
             default="INFO",
             choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],

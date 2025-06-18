@@ -27,7 +27,6 @@ from open_dubbing.utterance import Utterance
 class Voice(NamedTuple):
     name: str
     gender: str
-    region: str = ""
 
 
 class TextToSpeech(ABC):
@@ -41,32 +40,14 @@ class TextToSpeech(ABC):
     def get_available_voices(self, language_code: str) -> List[Voice]:
         pass
 
-    def get_voices_for_region_only(
-        self, *, voices: List[Voice], target_language_region: str
-    ) -> List[Voice]:
-        if len(target_language_region) == 0:
-            return voices
-
-        voices_copy = []
-
-        for voice in voices:
-            if voice.region.endswith(target_language_region):
-                voices_copy.append(voice)
-
-        return voices_copy
-
     def assign_voices(
         self,
         *,
         utterance_metadata: Sequence[Mapping[str, str | float]],
         target_language: str,
-        target_language_region: str,
     ) -> Mapping[str, str | None]:
 
         voices = self.get_available_voices(target_language)
-        region_voices = self.get_voices_for_region_only(
-            voices=voices, target_language_region=target_language_region
-        )
 
         voice_assignment = {}
         used_voices = set()
@@ -76,7 +57,7 @@ class TextToSpeech(ABC):
                 continue
 
             gender = chunk["gender"]
-            for voice in region_voices:  # Try to use an unused voice of the same gender
+            for voice in voices:  # Try to use an unused voice of the same gender
                 if (
                     voice.name not in used_voices
                     and voice.gender.lower() == gender.lower()
@@ -87,13 +68,13 @@ class TextToSpeech(ABC):
             else:
                 for (
                     voice
-                ) in region_voices:  # Try to use an already used voice of same gender
+                ) in voices:  # Try to use an already used voice of same gender
                     if voice.gender.lower() == gender.lower():
                         voice_assignment[speaker_id] = voice.name
                         used_voices.add(voice.name)
                         break
                 else:  # Try to use any other voice of any gender even if it used
-                    for voice in region_voices:
+                    for voice in voices:
                         voice_assignment[speaker_id] = voice.name
                         used_voices.add(voice.name)
                         break

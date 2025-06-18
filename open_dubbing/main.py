@@ -65,7 +65,7 @@ def log_error_and_exit(msg: str, code: ExitCode):
 
 
 def check_languages(
-    source_language, target_language, _tts, translation, _stt, target_language_region
+    source_language, target_language, _tts, translation, _stt
 ):
     spt = _stt.get_languages()
     translation_languages = translation.get_language_pairs()
@@ -87,11 +87,8 @@ def check_languages(
         log_error_and_exit(msg, ExitCode.INVALID_LANGUAGE_TTS)
 
     voices = _tts.get_available_voices(language_code=target_language)
-    region_voices = _tts.get_voices_for_region_only(
-        voices=voices, target_language_region=target_language_region
-    )
-    if len(region_voices) == 0:
-        msg = f"filtering by '{target_language_region}' returns no voices for language '{target_language}' in the text to speech system"
+    if len(voices) == 0:
+        msg = f"no voices available for language '{target_language}' in the text to speech system"
         log_error_and_exit(msg, ExitCode.INVALID_LANGUAGE_TTS)
 
 
@@ -258,7 +255,6 @@ def main():
         tts,
         translation,
         stt,
-        args.target_language_region,
     )
 
     if not os.path.exists(args.output_directory):
@@ -269,7 +265,6 @@ def main():
         output_directory=args.output_directory,
         source_language=source_language,
         target_language=args.target_language,
-        target_language_region=args.target_language_region,
         hugging_face_token=hugging_face_token,
         tts=tts,
         translation=translation,

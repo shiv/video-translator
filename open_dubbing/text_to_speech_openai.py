@@ -46,7 +46,6 @@ class TextToSpeechOpenAI(TextToSpeech):
             voice = Voice(
                 name=voice_name,
                 gender=gender,
-                region="",
             )
             voices.append(voice)
 
