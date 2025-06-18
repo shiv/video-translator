@@ -1,0 +1,18 @@
+2025-06-18 13:52:18,037 - INFO - Detected language 'eng'
+2025-06-18 13:52:20,391 - INFO - Processing 'e2e-tests/englishvideo.mp4' file with stt 'auto', tts 'mms' and device 'cpu'
+2025-06-18 13:52:22,963 - INFO - Dubbing process starting...
+2025-06-18 13:52:38,595 - INFO - Completed task 'Preprocessing completed': current_rss 1100.78 MB, time 15.63s
+2025-06-18 13:52:38,595 - INFO - Speech to text...
+2025-06-18 13:53:26,132 - INFO - Completed task 'Speech to text completed': current_rss 2874.89 MB, time 47.54s
+2025-06-18 13:54:37,541 - INFO - Completed task 'Translation completed': current_rss 3188.67 MB, time 71.41s
+2025-06-18 13:54:37,542 - INFO - text_to_speech.assign_voices. Returns: {'SPEAKER_00': 'voice'}
+2025-06-18 13:54:47,331 - INFO - Completed task 'Text to speech completed': current_rss 2100.73 MB, time 9.79s
+2025-06-18 13:54:50,232 - INFO - Completed task 'Post processing completed': current_rss 1848.17 MB, time 2.90s
+2025-06-18 13:54:50,232 - INFO - Dubbing process finished.
+2025-06-18 13:54:50,232 - INFO - Total execution time: 147.27 secs
+2025-06-18 13:54:50,232 - INFO -  Task 'preprocessing' in 15.63 secs (10.61%)
+2025-06-18 13:54:50,232 - INFO -  Task 'stt' in 47.54 secs (32.28%)
+2025-06-18 13:54:50,232 - INFO -  Task 'translation' in 71.41 secs (48.49%)
+2025-06-18 13:54:50,232 - INFO -  Task 'tts' in 9.79 secs (6.65%)
+2025-06-18 13:54:50,232 - INFO -  Task 'postprocessing' in 2.90 secs (1.97%)
+2025-06-18 13:54:50,232 - INFO - Output files saved in: output/.
