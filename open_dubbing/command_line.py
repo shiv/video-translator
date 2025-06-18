@@ -104,18 +104,11 @@ class CommandLine:
             "--translator",
             type=str,
             default="nllb",
-            choices=["nllb", "apertium"],
+            choices=["nllb"],
             help=(
-                "Text to Speech engine to use. Choices are:\n"
+                "Translation engine to use. Choices are:\n"
                 "'nllb': Meta's no Language Left Behind (NLLB).\n"
-                "'apertium': Apertium compatible API server.\n"
             ),
-        )
-        parser.add_argument(
-            "--apertium_server",
-            type=str,
-            default="",
-            help=("Apertium's URL server to use"),
         )
 
         parser.add_argument(

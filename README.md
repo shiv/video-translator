@@ -19,7 +19,7 @@ It combines this project, https://github.com/Softcatala/subdub-editor (an editor
 * Supports multiple Text To Speech (TTS): MMS, OpenAI TTS
  * Allows to use any non-supported one by configuring an API
 * Gender voice detection to allow to assign properly synthetic voice
-* Support for multiple translation engines (Meta's NLLB, Apertium API, etc)
+* Support for translation using Meta's NLLB (No Language Left Behind)
 * Automatic detection of the source language of the video (using Whisper)
 
 # Roadmap
