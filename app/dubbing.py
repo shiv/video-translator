@@ -1,3 +1,17 @@
+# Copyright 2024 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import dataclasses
 import functools
 import logging
@@ -14,15 +28,14 @@ import torch
 
 from pyannote.audio import Pipeline
 
-from open_dubbing import logger
-from open_dubbing.services.processing import audio_processing
-from open_dubbing.services.processing.ffmpeg import FFmpeg
-from open_dubbing.services.processing.preprocessing import PreprocessingArtifacts
-from open_dubbing.services.stt.speech_to_text import SpeechToText
-from open_dubbing.services.tts.text_to_speech import TextToSpeech
-from open_dubbing.services.translation.translation import Translation
-from open_dubbing.services.processing.utterance import Utterance
-from open_dubbing.services.processing.video_processing import VideoProcessing
+from app import logger
+from app.services.processing import audio_processing
+from app.services.processing.preprocessing import PreprocessingArtifacts
+from app.services.stt.speech_to_text import SpeechToText
+from app.services.tts.text_to_speech import TextToSpeech
+from app.services.translation.translation import Translation
+from app.services.processing.utterance import Utterance
+from app.services.processing.video_processing import VideoProcessing
 
 _DEFAULT_PYANNOTE_MODEL: Final[str] = "pyannote/speaker-diarization-3.1"
 _NUMBER_OF_STEPS: Final[int] = 7
@@ -155,13 +168,7 @@ class Dubber:
         logger().debug("Verifying access to PyAnnote from HuggingFace.")
         if not self.pyannote_pipeline:
             raise PyAnnoteAccessError(
-                "No access to HuggingFace. Make sure you passed the correct API token"
-                " either as 'hugging_face_token' or through the"
-                " environmental variable. Also, please make sure you accepted the"
-                " user agreement for the segmentation model"
-                " (https://huggingface.co/pyannote/segmentation-3.0) and the speaker"
-                " diarization model"
-                " (https://huggingface.co/pyannote/speaker-diarization-3.1)."
+                "No access to HuggingFace"
             )
         logger().debug("Access to PyAnnote from HuggingFace verified.")
 

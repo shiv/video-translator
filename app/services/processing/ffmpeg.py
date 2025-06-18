@@ -5,7 +5,7 @@ import tempfile
 
 from typing import List
 
-from open_dubbing import logger
+from app import logger
 
 
 class FFmpeg:

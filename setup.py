@@ -8,7 +8,7 @@ HERE = pathlib.Path(__file__).parent
 README = (HERE / "README.md").read_text()
 
 
-def read_version(fname="open_dubbing/__init__.py"):
+def read_version(fname="app/__init__.py"):
     with open(fname, encoding="utf-8") as f:
         for line in f:
             if line.startswith("__version__"):
@@ -46,7 +46,7 @@ setup(
     },
     entry_points={
         "console_scripts": [
-            "open-dubbing=open_dubbing.main:main",
+            "open-dubbing=app.main:main",
         ]
     },
     python_requires='>=3.10'

@@ -7,30 +7,31 @@ import transformers
 
 from iso639 import Lang
 
-from open_dubbing import logger
-from open_dubbing.command_line import CommandLine
-from open_dubbing.services.processing.dubbing import Dubber
-from open_dubbing.exit_code import ExitCode
-from open_dubbing.services.processing.ffmpeg import FFmpeg
-from open_dubbing.services.stt.speech_to_text_faster_whisper import SpeechToTextFasterWhisper
-from open_dubbing.services.stt.speech_to_text_whisper_transformers import (
+from app import logger
+from app.command_line import CommandLine
+from app.services.processing.dubbing import Dubber
+from app.exit_code import ExitCode
+from app.services.processing.ffmpeg import FFmpeg
+from app.services.stt.speech_to_text_faster_whisper import SpeechToTextFasterWhisper
+from app.services.stt.speech_to_text_whisper_transformers import (
     SpeechToTextWhisperTransformers,
 )
-from open_dubbing.services.tts.text_to_speech_api import TextToSpeechAPI
-from open_dubbing.services.tts.text_to_speech_mms import TextToSpeechMMS
-from open_dubbing.services.translation.translation_nllb import TranslationNLLB
+from app.services.tts.text_to_speech_api import TextToSpeechAPI
+from app.services.tts.text_to_speech_mms import TextToSpeechMMS
+from app.services.translation.translation_nllb import TranslationNLLB
+from app.services.tts.text_to_speech_openai import TextToSpeechOpenAI
 
 
 def _init_logging(log_level):
     logging.basicConfig(level=logging.ERROR)  # Suppress third-party loggers
 
     # Create your application logger
-    app_logger = logging.getLogger("open_dubbing")
+    app_logger = logging.getLogger("app")
     app_logger.setLevel(log_level)
     app_logger.propagate = False
 
     # File handler for logging to a file
-    file_handler = logging.FileHandler("open_dubbing.log")
+    file_handler = logging.FileHandler("app.log")
     console_handler = logging.StreamHandler()
 
     # Formatter for log messages
@@ -166,12 +167,6 @@ def _get_selected_tts(
             msg = "When using TTS's API, you need to set the TTS_API_SERVER environment variable"
             log_error_and_exit(msg, ExitCode.NO_TTS_API_SERVER)
     elif selected_tts == "openai":
-        try:
-            from open_dubbing.services.tts.text_to_speech_openai import TextToSpeechOpenAI
-        except Exception:
-            msg = "Make sure that OpenAI library is installed by running 'pip install open-dubbing[openai]'"
-            log_error_and_exit(msg, ExitCode.NO_OPENAI_TTS)
-
         key = _get_openai_key()
         tts = TextToSpeechOpenAI(device=device, api_key=key)
     else:

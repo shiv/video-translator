@@ -5,7 +5,7 @@ import time
 from abc import ABC, abstractmethod
 from typing import Final, Mapping, Sequence
 
-from open_dubbing import logger
+from app import logger
 
 _BREAK_MARKER: Final[str] = "<BREAK>"
 

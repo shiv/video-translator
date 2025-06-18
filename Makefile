@@ -1,6 +1,6 @@
 .PHONY: dev run-tests run-e2e-tests publish-release
 
-PATHS = open_dubbing/ tests/ e2e-tests/
+PATHS = app/ tests/ e2e-tests/
 
 dev:
 	python -m black $(PATHS)

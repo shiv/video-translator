@@ -4,8 +4,8 @@ import numpy as np
 
 from faster_whisper import WhisperModel
 
-from open_dubbing import logger
-from open_dubbing.services.stt.speech_to_text import SpeechToText
+from app import logger
+from app.services.stt.speech_to_text import SpeechToText
 
 
 class SpeechToTextFasterWhisper(SpeechToText):

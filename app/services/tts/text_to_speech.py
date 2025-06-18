@@ -4,10 +4,10 @@ import os
 from abc import ABC, abstractmethod
 from typing import Final, List, Mapping, NamedTuple, Sequence
 
-from open_dubbing import logger
-from open_dubbing.services.processing.ffmpeg import FFmpeg
-from open_dubbing.services.processing.utils.pydub_audio_segment import AudioSegment
-from open_dubbing.services.processing.utterance import Utterance
+from app import logger
+from app.services.processing.ffmpeg import FFmpeg
+from app.services.processing.utils.pydub_audio_segment import AudioSegment
+from app.services.processing.utterance import Utterance
 
 
 class Voice(NamedTuple):
