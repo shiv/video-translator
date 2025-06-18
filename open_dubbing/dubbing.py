@@ -32,9 +32,9 @@ from open_dubbing import audio_processing, logger
 from open_dubbing.exit_code import ExitCode
 from open_dubbing.ffmpeg import FFmpeg
 from open_dubbing.preprocessing import PreprocessingArtifacts
-from open_dubbing.stt.speech_to_text import SpeechToText
-from open_dubbing.tts.text_to_speech import TextToSpeech
-from open_dubbing.translation.translation import Translation
+from open_dubbing.services.stt.speech_to_text import SpeechToText
+from open_dubbing.services.tts.text_to_speech import TextToSpeech
+from open_dubbing.services.translation.translation import Translation
 from open_dubbing.utterance import Utterance
 from open_dubbing.video_processing import VideoProcessing
 

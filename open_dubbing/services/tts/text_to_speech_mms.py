@@ -21,7 +21,7 @@ import torch
 from transformers import AutoTokenizer, VitsModel
 
 from open_dubbing import logger
-from open_dubbing.tts.text_to_speech import TextToSpeech, Voice
+from open_dubbing.services.tts.text_to_speech import TextToSpeech, Voice
 
 
 class TextToSpeechMMS(TextToSpeech):

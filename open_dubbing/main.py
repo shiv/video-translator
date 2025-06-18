@@ -26,13 +26,13 @@ from open_dubbing.command_line import CommandLine
 from open_dubbing.dubbing import Dubber
 from open_dubbing.exit_code import ExitCode
 from open_dubbing.ffmpeg import FFmpeg
-from open_dubbing.stt.speech_to_text_faster_whisper import SpeechToTextFasterWhisper
-from open_dubbing.stt.speech_to_text_whisper_transformers import (
+from open_dubbing.services.stt.speech_to_text_faster_whisper import SpeechToTextFasterWhisper
+from open_dubbing.services.stt.speech_to_text_whisper_transformers import (
     SpeechToTextWhisperTransformers,
 )
-from open_dubbing.tts.text_to_speech_api import TextToSpeechAPI
-from open_dubbing.tts.text_to_speech_mms import TextToSpeechMMS
-from open_dubbing.translation.translation_nllb import TranslationNLLB
+from open_dubbing.services.tts.text_to_speech_api import TextToSpeechAPI
+from open_dubbing.services.tts.text_to_speech_mms import TextToSpeechMMS
+from open_dubbing.services.translation.translation_nllb import TranslationNLLB
 
 
 def _init_logging(log_level):
@@ -154,7 +154,7 @@ def _get_selected_tts(
             log_error_and_exit(msg, ExitCode.NO_TTS_API_SERVER)
     elif selected_tts == "openai":
         try:
-            from open_dubbing.tts.text_to_speech_openai import TextToSpeechOpenAI
+            from open_dubbing.services.tts.text_to_speech_openai import TextToSpeechOpenAI
         except Exception:
             msg = "Make sure that OpenAI library is installed by running 'pip install open-dubbing[openai]'"
             log_error_and_exit(msg, ExitCode.NO_OPENAI_TTS)
