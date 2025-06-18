@@ -26,7 +26,7 @@ from transformers.models.wav2vec2.modeling_wav2vec2 import (
 )
 
 from open_dubbing import logger
-from open_dubbing.pydub_audio_segment import AudioSegment
+from open_dubbing.services.processing.utils.pydub_audio_segment import AudioSegment
 
 
 class ModelHead(nn.Module):

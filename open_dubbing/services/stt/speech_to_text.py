@@ -22,8 +22,8 @@ from typing import Mapping, Sequence
 from iso639 import Lang
 
 from open_dubbing import logger
-from open_dubbing.pydub_audio_segment import AudioSegment
-from open_dubbing.voice_gender_classifier import VoiceGenderClassifier
+from open_dubbing.services.processing.utils.pydub_audio_segment import AudioSegment
+from open_dubbing.services.processing.utils.voice_gender_classifier import VoiceGenderClassifier
 
 
 class SpeechToText(ABC):

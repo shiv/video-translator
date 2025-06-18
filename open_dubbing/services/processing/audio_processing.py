@@ -23,7 +23,7 @@ import torch
 from pyannote.audio import Pipeline
 
 from open_dubbing import logger
-from open_dubbing.pydub_audio_segment import AudioSegment
+from open_dubbing.services.processing.utils.pydub_audio_segment import AudioSegment
 
 _DEFAULT_DUBBED_AUDIO_FILE: Final[str] = "dubbed_audio"
 _DEFAULT_OUTPUT_FORMAT: Final[str] = ".mp3"

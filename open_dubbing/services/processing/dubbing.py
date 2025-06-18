@@ -28,15 +28,15 @@ import torch
 
 from pyannote.audio import Pipeline
 
-from open_dubbing import audio_processing, logger
-from open_dubbing.exit_code import ExitCode
-from open_dubbing.ffmpeg import FFmpeg
-from open_dubbing.preprocessing import PreprocessingArtifacts
+from open_dubbing import logger
+from open_dubbing.services.processing import audio_processing
+from open_dubbing.services.processing.ffmpeg import FFmpeg
+from open_dubbing.services.processing.preprocessing import PreprocessingArtifacts
 from open_dubbing.services.stt.speech_to_text import SpeechToText
 from open_dubbing.services.tts.text_to_speech import TextToSpeech
 from open_dubbing.services.translation.translation import Translation
-from open_dubbing.utterance import Utterance
-from open_dubbing.video_processing import VideoProcessing
+from open_dubbing.services.processing.utterance import Utterance
+from open_dubbing.services.processing.video_processing import VideoProcessing
 
 _DEFAULT_PYANNOTE_MODEL: Final[str] = "pyannote/speaker-diarization-3.1"
 _NUMBER_OF_STEPS: Final[int] = 7

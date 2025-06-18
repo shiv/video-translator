@@ -22,7 +22,7 @@ import tempfile
 from typing import Any, Dict, Final, List, Tuple
 
 from open_dubbing import logger
-from open_dubbing.preprocessing import PreprocessingArtifacts
+from open_dubbing.services.processing.preprocessing import PreprocessingArtifacts
 
 
 class Utterance:

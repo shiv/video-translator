@@ -23,9 +23,9 @@ from iso639 import Lang
 
 from open_dubbing import logger
 from open_dubbing.command_line import CommandLine
-from open_dubbing.dubbing import Dubber
+from open_dubbing.services.processing.dubbing import Dubber
 from open_dubbing.exit_code import ExitCode
-from open_dubbing.ffmpeg import FFmpeg
+from open_dubbing.services.processing.ffmpeg import FFmpeg
 from open_dubbing.services.stt.speech_to_text_faster_whisper import SpeechToTextFasterWhisper
 from open_dubbing.services.stt.speech_to_text_whisper_transformers import (
     SpeechToTextWhisperTransformers,

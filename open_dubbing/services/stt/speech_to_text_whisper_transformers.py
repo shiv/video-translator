@@ -20,7 +20,7 @@ import torch
 from transformers import WhisperForConditionalGeneration, WhisperProcessor
 
 from open_dubbing import logger
-from open_dubbing.pydub_audio_segment import AudioSegment
+from open_dubbing.services.processing.utils.pydub_audio_segment import AudioSegment
 from open_dubbing.services.stt.speech_to_text import SpeechToText
 
 
