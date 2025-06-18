@@ -16,8 +16,8 @@ It combines this project, https://github.com/Softcatala/subdub-editor (an editor
 
 * Build on top of open source models and able to run it locally
 * Dubs automatically a video from a source to a target language
-* Supports multiple Text To Speech (TTS): Coqui, MMS, Edge, OpenAI TTS
- * Allows to use any non-supported one by configuring an API or CLI
+* Supports multiple Text To Speech (TTS): MMS, OpenAI TTS
+ * Allows to use any non-supported one by configuring an API
 * Gender voice detection to allow to assign properly synthetic voice
 * Support for multiple translation engines (Meta's NLLB, Apertium API, etc)
 * Automatic detection of the source language of the video (using Whisper)
@@ -51,7 +51,7 @@ https://github.com/user-attachments/assets/99936655-5851-4d0c-827b-f36f79f56190
 
 # Supported languages
 
-The support languages depends on the combination of text to speech, translation system and text to speech system used. With Coqui TTS, these are the languages supported (I only tested a very few of them):
+The support languages depends on the combination of text to speech, translation system and text to speech system used. With MMS TTS, these are the languages supported (I only tested a very few of them):
 
 Supported source languages: Afrikaans, Amharic, Armenian, Assamese, Bashkir, Basque, Belarusian, Bengali, Bosnian, Bulgarian, Burmese, Catalan, Chinese, Croatian, Czech, Danish, Dutch, English, Estonian, Faroese, Finnish, French, Galician, Georgian, German, Gujarati, Haitian, Hausa, Hebrew, Hindi, Hungarian, Icelandic, Indonesian, Italian, Japanese, Javanese, Kannada, Kazakh, Khmer, Korean, Lao, Lingala, Lithuanian, Luxembourgish, Macedonian, Malayalam, Maltese, Maori, Marathi, Modern Greek (1453-), Norwegian Nynorsk, Occitan (post 1500), Panjabi, Polish, Portuguese, Romanian, Russian, Sanskrit, Serbian, Shona, Sindhi, Sinhala, Slovak, Slovenian, Somali, Spanish, Sundanese, Swedish, Tagalog, Tajik, Tamil, Tatar, Telugu, Thai, Tibetan, Turkish, Turkmen, Ukrainian, Urdu, Vietnamese, Welsh, Yoruba, Yue Chinese
 
@@ -65,13 +65,7 @@ To install the open_dubbing in all platforms:
 pip install open_dubbing
 ```
 
-If you want to install also Coqui-tts, do:
-
-```shell
-pip install open_dubbing[coqui]
-```
-
-If you want to install also OpenIA support, do:
+If you want to install also OpenAI support, do:
 
 ```shell
 pip install open_dubbing[openai]
@@ -85,24 +79,12 @@ In Linux you also need to install:
 sudo apt install ffmpeg
 ```
 
-If you are going to use Coqui-tts you also need to install espeak-ng:
-
-```shell
-sudo apt install espeak-ng
-```
-
 ## macOS additional dependencies
 
 In macOS you also need to install:
 
 ```shell
 brew install ffmpeg
-```
-
-If you are going to use Coqui-tts you also need to install espeak-ng:
-
-```shell
-brew install espeak-ng
 ```
 
 ## Windows additional dependencies
@@ -187,9 +169,7 @@ Core libraries used:
 * [faster-whisper](https://github.com/SYSTRAN/faster-whisper) for audio to speech
 * [NLLB-200](https://github.com/facebookresearch/fairseq/tree/nllb) for machine translation
 * TTS
-  * [coqui-tts](https://github.com/idiap/coqui-ai-TTS)
   * Meta [mms](https://github.com/facebookresearch/fairseq/tree/main/examples/mms)
-  * Microsoft [Edge TTS](https://github.com/rany2/edge-tts)
   * [OpenAI TTS](https://platform.openai.com/docs/guides/text-to-speech)
 
 And very special thanks to [ariel](https://github.com/google-marketing-solutions/ariel) from which we leveraged parts of their code base.

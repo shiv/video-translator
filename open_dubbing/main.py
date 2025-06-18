@@ -31,8 +31,6 @@ from open_dubbing.speech_to_text_whisper_transformers import (
     SpeechToTextWhisperTransformers,
 )
 from open_dubbing.text_to_speech_api import TextToSpeechAPI
-from open_dubbing.text_to_speech_cli import TextToSpeechCLI
-from open_dubbing.text_to_speech_edge import TextToSpeechEdge
 from open_dubbing.text_to_speech_mms import TextToSpeechMMS
 from open_dubbing.translation_apertium import TranslationApertium
 from open_dubbing.translation_nllb import TranslationNLLB
@@ -147,33 +145,12 @@ def list_supported_languages(_tts, translation, device):  # TODO: Not used
 
 def _get_selected_tts(
     selected_tts: str,
-    tts_cli_cfg_file: str,
     tts_api_server: str,
     device: str,
     openai_api_key: str,
 ):
     if selected_tts == "mms":
         tts = TextToSpeechMMS(device)
-    elif selected_tts == "edge":
-        tts = TextToSpeechEdge(device)
-    elif selected_tts == "coqui":
-        try:
-            from open_dubbing.coqui import Coqui
-            from open_dubbing.text_to_speech_coqui import TextToSpeechCoqui
-        except Exception:
-            msg = "Make sure that Coqui-tts is installed by running 'pip install open-dubbing[coqui]'"
-            log_error_and_exit(msg, ExitCode.NO_COQUI_TTS)
-
-        tts = TextToSpeechCoqui(device)
-        if not Coqui.is_espeak_ng_installed():
-            msg = "To use Coqui-tts you have to have espeak or espeak-ng installed"
-            log_error_and_exit(msg, ExitCode.NO_COQUI_ESPEAK)
-    elif selected_tts == "cli":
-        if len(tts_cli_cfg_file) == 0:
-            msg = "When using the tts CLI you need to provide a configuration file which describes the commands and voices to use."
-            log_error_and_exit(msg, ExitCode.NO_CLI_CFG_FILE)
-
-        tts = TextToSpeechCLI(device, tts_cli_cfg_file)
     elif selected_tts == "api":
         tts = TextToSpeechAPI(device, tts_api_server)
         if len(tts_api_server) == 0:
@@ -242,7 +219,6 @@ def main():
 
     tts = _get_selected_tts(
         args.tts,
-        args.tts_cli_cfg_file,
         args.tts_api_server,
         args.device,
         args.openai_api_key,

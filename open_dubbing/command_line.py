@@ -69,14 +69,11 @@ class CommandLine:
             "--tts",
             type=str,
             default="mms",
-            choices=["mms", "coqui", "openai", "edge", "cli", "api"],
+            choices=["mms", "openai", "api"],
             help=(
                 "Text to Speech engine to use. Choices are:\n"
                 "'mms': Meta Multilingual Speech engine, supports +1100 languages.\n"
-                "'coqui': Coqui TTS, an open-source alternative for high-quality TTS.\n"
                 "'openai': OpenAI TTS.\n"
-                "'edge': Microsoft Edge TSS.\n"
-                "'cli': User defined TTS invoked from command line.\n"
                 "'api': Implements a user defined TTS API contract to enable non supported TTS.\n"
             ),
         )
@@ -161,12 +158,6 @@ class CommandLine:
             "--target_language_region",
             default="",
             help="For some TTS you can specify the region of the language. For example, 'ES' will indicate accent from Spain.",
-        )
-
-        parser.add_argument(
-            "--tts_cli_cfg_file",
-            default="",
-            help="JSon configuration file when using a TTS which is invoked from the command line.",
         )
 
         parser.add_argument(
