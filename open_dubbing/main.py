@@ -108,11 +108,39 @@ def check_is_a_video(input_file: str):
 HUGGING_FACE_VARNAME = "HF_TOKEN"
 
 
-def get_token(provided_token: str) -> str:
-    token = provided_token or os.getenv(HUGGING_FACE_VARNAME)
+def get_env_var(var_name: str, default_value, var_type=str, choices=None):
+    """Get environment variable with type conversion and validation."""
+    value = os.getenv(var_name)
+    
+    if value is None:
+        return default_value
+    
+    # Type conversion
+    if var_type == bool:
+        # For boolean environment variables, check for truthy values
+        return value.lower() in ('true', '1', 'yes', 'on')
+    elif var_type == int:
+        try:
+            value = int(value)
+        except ValueError:
+            logger().warning(f"Invalid integer value for {var_name}: {value}. Using default: {default_value}")
+            return default_value
+    elif var_type == str:
+        pass  # No conversion needed
+    
+    # Validate choices if provided
+    if choices and value not in choices:
+        logger().warning(f"Invalid choice for {var_name}: {value}. Valid choices: {choices}. Using default: {default_value}")
+        return default_value
+    
+    return value
+
+
+def get_hugging_face_token() -> str:
+    """Get Hugging Face token from environment variable."""
+    token = os.getenv("HUGGING_FACE_TOKEN") or os.getenv(HUGGING_FACE_VARNAME)
     if not token:
-        msg = "You must either provide the '--hugging_face_token' argument or"
-        msg += f" set the '{HUGGING_FACE_VARNAME.upper()}' environment variable."
+        msg = f"Hugging Face token must be set via 'HUGGING_FACE_TOKEN' or '{HUGGING_FACE_VARNAME}' environment variable."
         log_error_and_exit(msg, ExitCode.MISSING_HF_KEY)
     return token
 
@@ -141,16 +169,15 @@ def list_supported_languages(_tts, translation, device):  # TODO: Not used
 
 def _get_selected_tts(
     selected_tts: str,
-    tts_api_server: str,
     device: str,
-    openai_api_key: str,
 ):
     if selected_tts == "mms":
         tts = TextToSpeechMMS(device)
     elif selected_tts == "api":
+        tts_api_server = get_env_var("TTS_API_SERVER", "")
         tts = TextToSpeechAPI(device, tts_api_server)
         if len(tts_api_server) == 0:
-            msg = "When using TTS's API, you need to specify with --tts_api_server the URL of the server"
+            msg = "When using TTS's API, you need to set the TTS_API_SERVER environment variable"
             log_error_and_exit(msg, ExitCode.NO_TTS_API_SERVER)
     elif selected_tts == "openai":
         try:
@@ -159,7 +186,7 @@ def _get_selected_tts(
             msg = "Make sure that OpenAI library is installed by running 'pip install open-dubbing[openai]'"
             log_error_and_exit(msg, ExitCode.NO_OPENAI_TTS)
 
-        key = _get_openai_key(key=openai_api_key)
+        key = _get_openai_key()
         tts = TextToSpeechOpenAI(device=device, api_key=key)
     else:
         raise ValueError(f"Invalid tts value {selected_tts}")
@@ -179,27 +206,33 @@ def _get_selected_translator(
     return translation
 
 
-def _get_openai_key(*, key: str):
-    if key:
-        return key
-
+def _get_openai_key():
     VAR = "OPENAI_API_KEY"
     key = os.getenv(VAR)
     if key:
         return key
 
-    msg = f"OpenAI TTS selected but no key has been pass as argument or defined in the environment variable {VAR}"
+    msg = f"OpenAI TTS selected but no key has been defined in the environment variable {VAR}"
     log_error_and_exit(msg, ExitCode.NO_OPENAI_KEY)
 
 
 def main():
 
     args = CommandLine.read_parameters()
-    _init_logging(args.log_level)
+    
+    # Get configuration from environment variables
+    output_directory = get_env_var("OUTPUT_DIRECTORY", "output/")
+    log_level = get_env_var("LOG_LEVEL", "INFO", str, ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"])
+    device = get_env_var("DEVICE", "cpu", str, ["cpu", "cuda"])
+    cpu_threads = get_env_var("CPU_THREADS", 0, int)
+    vad = get_env_var("VAD", False, bool)
+    clean_intermediate_files = get_env_var("CLEAN_INTERMEDIATE_FILES", False, bool)
+    
+    _init_logging(log_level)
 
     check_is_a_video(args.input_file)
 
-    hugging_face_token = get_token(args.hugging_face_token)
+    hugging_face_token = get_hugging_face_token()
 
     if not FFmpeg.is_ffmpeg_installed():
         msg = "You need to have ffmpeg (which includes ffprobe) installed."
@@ -207,9 +240,7 @@ def main():
 
     tts = _get_selected_tts(
         args.tts,
-        args.tts_api_server,
-        args.device,
-        args.openai_api_key,
+        device,
     )
 
     if sys.platform == "darwin":
@@ -222,19 +253,19 @@ def main():
     ):
         stt = SpeechToTextFasterWhisper(
             model_name=args.whisper_model,
-            device=args.device,
-            cpu_threads=args.cpu_threads,
-            vad=args.vad,
+            device=device,
+            cpu_threads=cpu_threads,
+            vad=vad,
         )
-        if args.vad:
+        if vad:
             stt_text += " (with vad filter)"
     else:
         stt = SpeechToTextWhisperTransformers(
             model_name=args.whisper_model,
-            device=args.device,
-            cpu_threads=args.cpu_threads,
+            device=device,
+            cpu_threads=cpu_threads,
         )
-        if args.vad:
+        if vad:
             logger().warning(
                 "Vad filter is only supported in fasterwhisper Speech to Text library"
             )
@@ -246,7 +277,7 @@ def main():
         logger().info(f"Detected language '{source_language}'")
 
     translation = _get_selected_translator(
-        args.translator, args.nllb_model, args.device
+        args.translator, args.nllb_model, device
     )
 
     check_languages(
@@ -257,25 +288,25 @@ def main():
         stt,
     )
 
-    if not os.path.exists(args.output_directory):
-        os.makedirs(args.output_directory)
+    if not os.path.exists(output_directory):
+        os.makedirs(output_directory)
 
     dubber = Dubber(
         input_file=args.input_file,
-        output_directory=args.output_directory,
+        output_directory=output_directory,
         source_language=source_language,
         target_language=args.target_language,
         hugging_face_token=hugging_face_token,
         tts=tts,
         translation=translation,
         stt=stt,
-        device=args.device,
-        cpu_threads=args.cpu_threads,
-        clean_intermediate_files=args.clean_intermediate_files,
+        device=device,
+        cpu_threads=cpu_threads,
+        clean_intermediate_files=clean_intermediate_files,
     )
 
     logger().info(
-        f"Processing '{args.input_file}' file with stt '{stt_text}', tts '{args.tts}' and device '{args.device}'"
+        f"Processing '{args.input_file}' file with stt '{stt_text}', tts '{args.tts}' and device '{device}'"
     )
     dubber.dub()
 

@@ -47,11 +47,6 @@ class CommandLine:
             help="Path to the input video file.",
         )
         parser.add_argument(
-            "--output_directory",
-            default="output/",
-            help="Directory to save output files.",
-        )
-        parser.add_argument(
             "--source_language",
             help="Source language (ISO 639-3)",
         )
@@ -59,11 +54,6 @@ class CommandLine:
             "--target_language",
             required=True,
             help="Target language for dubbing (ISO 639-3).",
-        )
-        parser.add_argument(
-            "--hugging_face_token",
-            default=None,
-            help="Hugging Face API token.",
         )
         parser.add_argument(
             "--tts",
@@ -78,11 +68,6 @@ class CommandLine:
             ),
         )
         parser.add_argument(
-            "--openai_api_key",
-            default=None,
-            help="OpenAI API key used for OpenAI TTS defined by passing this argument or having environment variable the OPENAI_API_KEY defined",
-        )
-        parser.add_argument(
             "--stt",
             type=str,
             default="auto",
@@ -94,11 +79,6 @@ class CommandLine:
                 "'transformers': Transformers OpenAI whisper implementation.\n"
             ),
         )
-        parser.add_argument(
-            "--vad",
-            action="store_true",
-            help="Enable VAD filter when using faster-whisper (reduces hallucinations).",
-        )
 
         parser.add_argument(
             "--translator",
@@ -109,25 +89,6 @@ class CommandLine:
                 "Translation engine to use. Choices are:\n"
                 "'nllb': Meta's no Language Left Behind (NLLB).\n"
             ),
-        )
-
-        parser.add_argument(
-            "--device",
-            type=str,
-            default="cpu",
-            choices=["cpu", "cuda"],
-            help=("Device to use"),
-        )
-        parser.add_argument(
-            "--cpu_threads",
-            type=int,
-            default=0,
-            help="number of threads used for CPU inference (if is not specified uses defaults for each framework)",
-        )
-        parser.add_argument(
-            "--clean-intermediate-files",
-            action="store_true",
-            help="clean intermediate files used during the dubbing process",
         )
 
         parser.add_argument(
@@ -145,19 +106,6 @@ class CommandLine:
             default="large-v3",
             choices=WHISPER_MODEL_NAMES,
             help="name of the OpenAI Whisper speech to text model size to use",
-        )
-
-        parser.add_argument(
-            "--log_level",
-            default="INFO",
-            choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
-            help="Set the logging level",
-        )
-        parser.add_argument(
-            "--tts_api_server",
-            type=str,
-            default="",
-            help=("TTS api server URL when using the 'API' tts"),
         )
 
         return parser.parse_args()
