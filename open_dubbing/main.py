@@ -277,8 +277,6 @@ def main():
         device=args.device,
         cpu_threads=args.cpu_threads,
         clean_intermediate_files=args.clean_intermediate_files,
-        original_subtitles=args.original_subtitles,
-        dubbed_subtitles=args.dubbed_subtitles,
     )
 
     logger().info(

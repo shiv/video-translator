@@ -34,7 +34,6 @@ from open_dubbing.exit_code import ExitCode
 from open_dubbing.ffmpeg import FFmpeg
 from open_dubbing.preprocessing import PreprocessingArtifacts
 from open_dubbing.speech_to_text import SpeechToText
-from open_dubbing.subtitles import Subtitles
 from open_dubbing.text_to_speech import TextToSpeech
 from open_dubbing.translation import Translation
 from open_dubbing.utterance import Utterance
@@ -105,8 +104,6 @@ class Dubber:
         device: str,
         cpu_threads: int = 0,
         clean_intermediate_files: bool = False,
-        original_subtitles: bool = False,
-        dubbed_subtitles: bool = False,
     ) -> None:
         self._input_file = input_file
         self.output_directory = output_directory
@@ -124,8 +121,6 @@ class Dubber:
         self.cpu_threads = cpu_threads
         self.clean_intermediate_files = clean_intermediate_files
         self.preprocessing_output = None
-        self.original_subtitles = original_subtitles
-        self.dubbed_subtitles = dubbed_subtitles
 
         if cpu_threads > 0:
             torch.set_num_threads(cpu_threads)
@@ -346,8 +341,6 @@ class Dubber:
     def _save_utterances(self):
         metadata = {
             "source_language": self.source_language,
-            "original_subtitles": self.original_subtitles,
-            "dubbed_subtitles": self.dubbed_subtitles,
         }
         Utterance(self.target_language, self.output_directory).save_utterances(
             utterance_metadata=self.utterance_metadata,
@@ -410,7 +403,6 @@ class Dubber:
 
         task_start_time = time.time()
         self.run_postprocessing()
-        self.run_generate_subtitles()
         self._save_utterances()
         times["postprocessing"] = self.log_debug_task_and_getime(
             "Post processing completed", task_start_time
@@ -425,46 +417,6 @@ class Dubber:
 
         self.log_maxrss_memory()
         logger().info("Output files saved in: %s.", self.output_directory)
-
-    def run_generate_subtitles(self):
-        if not self.original_subtitles and not self.dubbed_subtitles:
-            return
-
-        subtitles = Subtitles()
-
-        filename = f"{self.source_language}.srt"
-        source_srt = subtitles.write(
-            utterance_metadata=self.utterance_metadata,
-            directory=self.output_directory,
-            filename=filename,
-            translated=False,
-        )
-
-        filename = f"{self.target_language}.srt"
-        target_srt = subtitles.write(
-            utterance_metadata=self.utterance_metadata,
-            directory=self.output_directory,
-            filename=filename,
-            translated=True,
-        )
-
-        subtitles_files = []
-        languages_iso_639_3 = []
-
-        if self.original_subtitles:
-            subtitles_files.append(source_srt)
-            languages_iso_639_3.append(self.source_language)
-
-        if self.dubbed_subtitles:
-            subtitles_files.append(target_srt)
-            languages_iso_639_3.append(self.target_language)
-
-        FFmpeg().embed_subtitles(
-            video_file=self.postprocessing_output.video_file,
-            subtitles_files=subtitles_files,
-            languages_iso_639_3=languages_iso_639_3,
-        )
-        logger().info(f"Generated subtitles for languages {languages_iso_639_3}")
 
     def dub(self) -> PostprocessingArtifacts:
         """Orchestrates the entire dubbing process."""
@@ -501,7 +453,6 @@ class Dubber:
         task_start_time = time.time()
 
         self.run_postprocessing()
-        self.run_generate_subtitles()
         self._save_utterances()
         self.run_cleaning()
         times["postprocessing"] = self.log_debug_task_and_getime(
