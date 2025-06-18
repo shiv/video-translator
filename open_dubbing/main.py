@@ -282,10 +282,7 @@ def main():
     logger().info(
         f"Processing '{args.input_file}' file with stt '{stt_text}', tts '{args.tts}' and device '{args.device}'"
     )
-    if args.update:
-        dubber.update()
-    else:
-        dubber.dub()
+    dubber.dub()
 
 
 if __name__ == "__main__":

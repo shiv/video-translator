@@ -165,10 +165,5 @@ class CommandLine:
             default="",
             help=("TTS api server URL when using the 'API' tts"),
         )
-        parser.add_argument(
-            "--update",
-            action="store_true",
-            help="Update the dubbed video produced by a previous execution with the latest changes in utterance_metadata file",
-        )
 
         return parser.parse_args()

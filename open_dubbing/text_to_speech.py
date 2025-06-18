@@ -275,21 +275,11 @@ class TextToSpeech(ABC):
         output_directory: str,
         target_language: str,
         audio_file: str,
-        modified_metadata: Sequence[Mapping[str, str | float]] | None = None,
     ) -> Sequence[Mapping[str, str | float]]:
         """Processes a list of utterance metadata, generating dubbed audio files."""
 
-        modified_ids = {}
-        if modified_metadata is not None:
-            modified_ids = {utterance["id"] for utterance in modified_metadata}
-
         updated_utterance_metadata = []
         for utterance in utterance_metadata:
-            if modified_metadata is not None and utterance["id"] not in modified_ids:
-                utterance_copy = utterance.copy()
-                updated_utterance_metadata.append(utterance_copy)
-                continue
-
             utterance_copy = utterance.copy()
             if not utterance_copy["for_dubbing"]:
                 try:
