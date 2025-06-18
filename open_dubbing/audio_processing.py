@@ -18,16 +18,13 @@ import warnings
 
 from typing import Final, Mapping, Sequence
 
-import numpy as np
 import torch
 
-from moviepy import AudioFileClip
 from pyannote.audio import Pipeline
 
 from open_dubbing import logger
 from open_dubbing.pydub_audio_segment import AudioSegment
 
-_DEFAULT_DUBBED_VOCALS_AUDIO_FILE: Final[str] = "dubbed_vocals.mp3"
 _DEFAULT_DUBBED_AUDIO_FILE: Final[str] = "dubbed_audio"
 _DEFAULT_OUTPUT_FORMAT: Final[str] = ".mp3"
 
@@ -117,127 +114,59 @@ def run_cut_and_save_audio(
     return updated_utterance_metadata
 
 
-def insert_audio_at_timestamps(
+def create_dubbed_audio_track(
     *,
     utterance_metadata: Sequence[Mapping[str, str | float]],
-    background_audio_file: str,
+    original_audio_file: str,
     output_directory: str,
+    target_language: str,
 ) -> str:
-    """Inserts audio chunks into a background audio track at specified timestamps."""
-    background_audio = AudioSegment.from_mp3(background_audio_file)
-    total_duration = background_audio.duration_seconds
-    output_audio = AudioSegment.silent(duration=total_duration * 1000)
+    """Creates a complete dubbed audio track by replacing speech segments with dubbed audio.
+
+    Returns:
+        The path to the complete dubbed audio file.
+    """
+    # Load the original audio to get duration
+    original_audio = AudioSegment.from_file(original_audio_file)
+    total_duration = len(original_audio)
+    
+    # Start with silence of the same duration
+    dubbed_audio = AudioSegment.silent(duration=total_duration)
+    
+    # Insert dubbed segments at their original timestamps
     for item in utterance_metadata:
-        _file = ""
         try:
             for_dubbing = item["for_dubbing"]
-            _file = item["dubbed_path"]
-
-            if for_dubbing is False:
-                start = int(item["start"])
-                end = int(item["end"])
-                logger().debug(
-                    f"insert_audio_at_timestamps. Skipping {_file} at start time {start} and end at {end}"
-                )
-                continue
-
-            start_time = int(item["start"] * 1000)
-            logger().debug(f"insert_audio_at_timestamps. Open: {_file}")
-            audio_chunk = AudioSegment.from_mp3(_file)
-            output_audio = output_audio.overlay(
-                audio_chunk, position=start_time, loop=False
-            )
+            
+            if for_dubbing:
+                # Use dubbed audio for speech segments
+                dubbed_file = item["dubbed_path"]
+                start_time = int(item["start"] * 1000)
+                
+                logger().debug(f"create_dubbed_audio_track. Inserting dubbed audio: {dubbed_file}")
+                dubbed_chunk = AudioSegment.from_mp3(dubbed_file)
+                dubbed_audio = dubbed_audio.overlay(dubbed_chunk, position=start_time)
+            else:
+                # Use original audio for non-speech segments
+                start_time = int(item["start"] * 1000)
+                end_time = int(item["end"] * 1000)
+                
+                original_chunk = original_audio[start_time:end_time]
+                dubbed_audio = dubbed_audio.overlay(original_chunk, position=start_time)
+                
         except Exception as e:
             start = int(item["start"])
             end = int(item["end"])
+            dubbed_file = item.get("dubbed_path", "N/A")
             logger().error(
-                f"insert_audio_at_timestamps. Error on file: {_file} at start time {start} and end at {end}, error: {e}"
+                f"create_dubbed_audio_track. Error processing segment at {start}-{end}s, file: {dubbed_file}, error: {e}"
             )
 
-    dubbed_vocals_audio_file = os.path.join(
-        output_directory, _DEFAULT_DUBBED_VOCALS_AUDIO_FILE
-    )
-    output_audio.export(dubbed_vocals_audio_file, format="mp3")
-    return dubbed_vocals_audio_file
-
-
-def _needs_background_normalization(
-    *, background_audio_file: str, threshold: float = 0.1
-):
-    try:
-        chunk_size = 1024
-        fps = 44100
-
-        clip = AudioFileClip(background_audio_file)
-        duration = clip.duration
-        num_chunks = int(duration * fps / chunk_size)
-
-        max_amplitude = 0
-
-        for i in range(num_chunks):
-            start = i * chunk_size / fps
-            end = (i + 1) * chunk_size / fps
-            audio_chunk = clip.subclipped(start, end).to_soundarray(fps=fps)
-
-            # Calculate maximum amplitude of this chunk
-            chunk_amplitude = np.abs(audio_chunk).max(axis=1).max()
-            max_amplitude = max(max_amplitude, chunk_amplitude)
-
-        needs = max_amplitude > threshold
-        logger().debug(
-            f"_needs_background_normalization. max_amplitude: {max_amplitude}, needs {needs}"
-        )
-        return needs, max_amplitude
-
-    except Exception as e:
-        logger().error(f"_needs_background_normalization. Error: {e}")
-        return True, 1.0
-
-    finally:
-        clip.close()
-
-
-def merge_background_and_vocals(
-    *,
-    background_audio_file: str,
-    dubbed_vocals_audio_file: str,
-    output_directory: str,
-    target_language: str,
-    vocals_volume_adjustment: float = 5.0,
-    background_volume_adjustment: float = 0.0,
-) -> str:
-    """Mixes background music and vocals tracks, normalizes the volume, and exports the result.
-
-    Returns:
-      The path to the output audio file with merged dubbed vocals and original
-      background audio.
-    """
-
-    background = AudioSegment.from_mp3(background_audio_file)
-    vocals = AudioSegment.from_mp3(dubbed_vocals_audio_file)
-
-    # If background normalization is not needed, we skip it since it sometimes raises up
-    # residuals vocals not properly split in the demucs processes
-    needs, max_amplitude = _needs_background_normalization(
-        background_audio_file=background_audio_file
-    )
-    if needs:
-        logger().info(
-            f"merge_background_and_vocals. Normalizing background (max amplitude {max_amplitude:.2f})"
-        )
-        background = background.normalize()
-
-    vocals = vocals.normalize()
-    background = background + background_volume_adjustment
-    vocals = vocals + vocals_volume_adjustment
-    shortest_length = min(len(background), len(vocals))
-    background = background[:shortest_length]
-    vocals = vocals[:shortest_length]
-    mixed_audio = background.overlay(vocals)
+    # Export the final dubbed audio
     target_language_suffix = "_" + target_language.replace("-", "_").lower()
     dubbed_audio_file = os.path.join(
         output_directory,
         _DEFAULT_DUBBED_AUDIO_FILE + target_language_suffix + _DEFAULT_OUTPUT_FORMAT,
     )
-    mixed_audio.export(dubbed_audio_file, format="mp3")
+    dubbed_audio.export(dubbed_audio_file, format="mp3")
     return dubbed_audio_file

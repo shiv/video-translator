@@ -68,7 +68,7 @@ class SpeechToText(ABC):
     def _transcribe(
         self,
         *,
-        vocals_filepath: str,
+        audio_filepath: str,
         source_language_iso_639_1: str,
     ) -> str:
         pass
@@ -104,7 +104,7 @@ class SpeechToText(ABC):
                     )
                 else:
                     transcribed_text = self._transcribe(
-                        vocals_filepath=path,
+                        audio_filepath=path,
                         source_language_iso_639_1=iso_639_1,
                     )
                     transcribed_text = self._make_sure_single_space(transcribed_text)

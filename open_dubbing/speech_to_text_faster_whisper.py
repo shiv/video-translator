@@ -46,11 +46,11 @@ class SpeechToTextFasterWhisper(SpeechToText):
     def _transcribe(
         self,
         *,
-        vocals_filepath: str,
+        audio_filepath: str,
         source_language_iso_639_1: str,
     ) -> str:
         segments, _ = self.model.transcribe(
-            vocals_filepath, source_language_iso_639_1, vad_filter=self.vad
+            audio_filepath, source_language_iso_639_1, vad_filter=self.vad
         )
         return " ".join(segment.text for segment in segments)
 

@@ -38,11 +38,10 @@ class SpeechToTextWhisperTransformers(SpeechToText):
     def _transcribe(
         self,
         *,
-        vocals_filepath: str,
+        audio_filepath: str,
         source_language_iso_639_1: str,
     ) -> str:
-
-        audio = AudioSegment.from_file(vocals_filepath)
+        audio = AudioSegment.from_file(audio_filepath)
         audio = audio.set_channels(1)  # Convert to mono
         audio = audio.set_frame_rate(16000)  # Set the frame rate to 16kHz
         # Convert the audio to a numpy array
@@ -63,7 +62,7 @@ class SpeechToTextWhisperTransformers(SpeechToText):
             generated_ids, skip_special_tokens=True
         )[0]
         logger().debug(
-            f"speech_to_text_whisper_transfomers._transcribe. transcription: {transcription}, file {vocals_filepath}"
+            f"speech_to_text_whisper_transfomers._transcribe. transcription: {transcription}, file {audio_filepath}"
         )
         return transcription
 

@@ -29,7 +29,6 @@ import torch
 from pyannote.audio import Pipeline
 
 from open_dubbing import audio_processing, logger
-from open_dubbing.demucs import Demucs
 from open_dubbing.exit_code import ExitCode
 from open_dubbing.ffmpeg import FFmpeg
 from open_dubbing.preprocessing import PreprocessingArtifacts
@@ -187,17 +186,6 @@ class Dubber:
         video_file, audio_file = VideoProcessing.split_audio_video(
             video_file=self.input_file, output_directory=self.output_directory
         )
-        demucs = Demucs()
-        demucs_command = demucs.build_demucs_command(
-            audio_file=audio_file,
-            output_directory=self.output_directory,
-            device=self.device,
-        )
-        demucs.execute_demucs_command(command=demucs_command)
-        audio_vocals_file, audio_background_file = (
-            demucs.assemble_split_audio_file_paths(command=demucs_command)
-        )
-
         utterance_metadata = audio_processing.create_pyannote_timestamps(
             audio_file=audio_file,
             pipeline=self.pyannote_pipeline,
@@ -212,8 +200,6 @@ class Dubber:
         self.preprocessing_output = PreprocessingArtifacts(
             video_file=video_file,
             audio_file=audio_file,
-            audio_vocals_file=audio_vocals_file,
-            audio_background_file=audio_background_file,
         )
 
     def run_speech_to_text(self) -> None:
@@ -298,30 +284,22 @@ class Dubber:
         if output_directory:
             for path in [
                 f"dubbed_audio_{self.target_language}.mp3",
-                "dubbed_vocals.mp3",
             ]:
                 full_path = os.path.join(output_directory, path)
                 if os.path.exists(full_path):
                     os.remove(full_path)
 
     def run_postprocessing(self) -> None:
-        """Merges dubbed audio with the original background audio and video (if applicable).
+        """Creates dubbed audio track and combines it with video.
 
         Returns:
             Path to the final dubbed output file.
         """
-        dubbed_audio_vocals_file = audio_processing.insert_audio_at_timestamps(
+        dubbed_audio_file = audio_processing.create_dubbed_audio_track(
             utterance_metadata=self.utterance_metadata,
-            background_audio_file=self.preprocessing_output.audio_background_file,
-            output_directory=self.output_directory,
-        )
-        dubbed_audio_file = audio_processing.merge_background_and_vocals(
-            background_audio_file=self.preprocessing_output.audio_background_file,
-            dubbed_vocals_audio_file=dubbed_audio_vocals_file,
+            original_audio_file=self.preprocessing_output.audio_file,
             output_directory=self.output_directory,
             target_language=self.target_language,
-            vocals_volume_adjustment=5.0,
-            background_volume_adjustment=0.0,
         )
         if not self.preprocessing_output.video_file:
             raise ValueError(
