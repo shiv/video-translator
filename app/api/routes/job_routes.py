@@ -35,7 +35,7 @@ async def upload_video(
     stt_engine: str = Form("auto", description="Speech-to-text engine (auto, faster-whisper, transformers)"),
     stt_model: str = Form("medium", description="Whisper model size (medium, large-v2, large-v3)"),
     translation_engine: str = Form("nllb", description="Translation engine (nllb)"),
-    translation_model: str = Form("nllb-200-1.3B", description="NLLB model size (nllb-200-1.3B, nllb-200-3.3B)"),
+    translation_model: str = Form("nllb-200-1.3B", description="NLLB model size (nllb-200-1.3B)"),
     tts_engine: str = Form("mms", description="Text-to-speech engine (mms, openai, api)")
 ):
     """
