@@ -2,14 +2,12 @@
 
 ## Table of Contents
 1. [Executive Summary](#executive-summary)
-2. [System Overview](#system-overview)
+2. [MVP Implementation Decisions](#mvp-implementation-decisions)
 3. [Architecture Components](#architecture-components)
 4. [Technology Stack](#technology-stack)
-5. [API Design](#api-design)
-6. [Database Schema](#database-schema)
-7. [AWS Deployment Architecture](#aws-deployment-architecture)
-8. [Performance & Scalability](#performance--scalability)
-
+5. [Database Schema](#database-schema)
+6. [AWS Deployment Architecture](#aws-deployment-architecture)
+7. [Conclusion](#conclusion)
 ---
 
 ## Executive Summary
@@ -19,124 +17,67 @@ Design and implement a **single deployable service** that enables users to uploa
 
 ### Key MVP Features
 - ✅ Video upload with progress tracking (up to 200MB)
-- ✅ AI-powered video dubbing pipeline (11 stages)
-- ✅ Real-time processing status updates
-- ✅ Video preview before download
+- ✅ Real-time processing status updates via WebSocket
+- ✅ Video preview and download functionality
 - ✅ Multi-language support
-- ✅ Global CDN distribution
-- ✅ Basic web frontend
+- ✅ RESTful API with OpenAPI documentation
+- ✅ Async processing with in-memory job queue
+- ✅ Docker containerization for easy deployment
 
 ### Architecture Approach
-**Monolithic service** with modular components following clean architecture principles, deployed as a single Docker container on AWS ECS Fargate for MVP simplicity while maintaining extensibility.
+**Monolithic service** with modular components following clean architecture principles, using FastAPI with async processing. Designed for local development simplicity while maintaining extensibility for AWS deployment.
 
 ---
 
-## System Overview
+## MVP Implementation Decisions
 
-### High-Level System Architecture
+Based on clarifying questions and requirements, the following implementation decisions were made:
 
-```mermaid
-graph TB
-    subgraph "Client Layer"
-        WEB[Web Frontend]
-        API_CLIENT[API Clients]
-    end
-    
-    subgraph "CDN & Load Balancing"
-        CF[CloudFront CDN]
-        ALB[Application Load Balancer]
-    end
-    
-    subgraph "Application Layer (Single Service)"
-        FASTAPI[FastAPI Application]
-        
-        subgraph "API Handlers"
-            UPLOAD[Upload Handler]
-            STATUS[Status Handler]
-            DOWNLOAD[Download Handler]
-            PREVIEW[Preview Handler]
-        end
-        
-        subgraph "Processing Engine"
-            ORCHESTRATOR[Pipeline Orchestrator]
-            QUEUE[Job Queue Manager]
-            PROGRESS[Progress Tracker]
-        end
-        
-        subgraph "AI Services (Strategy Pattern)"
-            STT[Whisper STT Service]
-            TRANS[NLLB Translation Service]
-            TTS[MMS TTS Service]
-            DIARIZE[PyAnnote Diarization]
-        end
-    end
-    
-    subgraph "Storage Layer"
-        S3[AWS S3 Buckets]
-        RDS[SQLite RDS]
-        REDIS[Redis ElastiCache]
-    end
-    
-    subgraph "External Tools"
-        FFMPEG[FFmpeg Engine]
-    end
-    
-    WEB --> CF
-    API_CLIENT --> CF
-    CF --> ALB
-    ALB --> FASTAPI
-    
-    FASTAPI --> UPLOAD
-    FASTAPI --> STATUS
-    FASTAPI --> DOWNLOAD
-    FASTAPI --> PREVIEW
-    
-    UPLOAD --> ORCHESTRATOR
-    ORCHESTRATOR --> QUEUE
-    ORCHESTRATOR --> STT
-    ORCHESTRATOR --> TRANS
-    ORCHESTRATOR --> TTS
-    ORCHESTRATOR --> DIARIZE
-    ORCHESTRATOR --> FFMPEG
-    
-    FASTAPI --> S3
-    FASTAPI --> RDS
-    FASTAPI --> REDIS
-    
-    QUEUE --> REDIS
-    PROGRESS --> REDIS
-```
+### 1. Model Management
+**Decision**: Pre-download and cache the following models in memory:
+- **Whisper**: `openai/whisper-large-v3` (primary STT model)
+- **NLLB Translation**: 
+  - `facebook/nllb-200-3.3B` (high quality)
+  - `facebook/nllb-200-1.3B` (fallback for resource constraints)
+- **MMS TTS**: `facebook/mms-tts-*` (language-specific models loaded on-demand)
+
+**Implementation**: AI Service Factory with in-memory caching strategy
+
+### 2. Language Support
+**Decision**: Support multiple languages with full 200+ language capability
+
+
+### 3. Storage & Queue Strategy
+**Decision**: Simplified MVP approach for development and demo:
+- **Job Queue**: In-memory singleton with async processing (future: extendible to Redis)
+- **File Storage**: Local filesystem with S3 integration capability (configurable via environment variable)
+- **Progress Tracking**: In-memory callbacks with WebSocket broadcasting
+
+
+### 4. Processing Architecture
+**Decision**: Async processing with job queue
+- Non-blocking API endpoints
+- Concurrent job processing with semaphore control
+- Real-time progress updates via WebSocket
+- Background job processor with error handling
+
+### 5. Frontend Integration
+**Decision**: API-first approach with file upload and download URLs:
+- RESTful endpoints for all operations
+- WebSocket for real-time updates
+- OpenAPI documentation for easy frontend development
+---
 
 ### Core Principles
 1. **Single Responsibility**: Each component has a clear, focused purpose
 2. **Dependency Inversion**: High-level modules depend on abstractions
 3. **Strategy Pattern**: Pluggable AI services for future extensibility
 4. **Async Processing**: Non-blocking operations for better performance
-5. **Cloud-Native**: Designed for AWS deployment and scaling
+5. **MVP Simplicity**: Local development with AWS deployment in mind
 
 ---
 
 ## Architecture Components
-
-### 1. API Layer Components
-
-#### FastAPI Application
-```python
-# Main application structure
-app/
-├── main.py                 # FastAPI app initialization
-├── api/
-│   └── routes/
-│       ├── upload.py       # Video upload endpoints
-│       ├── jobs.py         # Job management endpoints
-│       ├── download.py     # Download endpoints
-│       └── preview.py      # Preview endpoints
-├── services/
-│   ├── ai_services/        # AI service implementations
-│   ├── processing/         # Video processing logic
-│   └── storage/            # Storage abstractions
-└── models/                 # Data models and schemas
-```
 
 #### Key API Endpoints
 ```python
@@ -166,13 +107,33 @@ WS /api/v1/jobs/{job_id}/progress
 - Error notifications
 ```
 
+## Frontend
+
+React frontend with:
+- File upload
+- Progress tracking
+- Download links
+- Preview clips
+
+## Project Structure
+
+```
+frontend/
+app/
+├── main.py # FastAPI application
+├── translator.py # Adapt existing (remove CLI)
+├── api/routes/ # API endpoints
+├── services/ # Job queue, processing, AI services
+└── models/ # Pydantic data models
+```
+
 ## Technology Stack
 
 ### Backend Framework
 - **FastAPI (Python 3.10+)**
   - High-performance async framework
   - Built-in OpenAPI documentation
-  - Excellent WebSocket support for real-time updates
+  - WebSocket support for real-time updates
   - Type hints and automatic validation
 
 
@@ -201,31 +162,9 @@ WS /api/v1/jobs/{job_id}/progress
 
 ---
 
-## API Design
-
-### RESTful API Endpoints
-
-#### Upload API
-`/api/v1/upload`
-
-#### Job Status API
-`/api/v1/jobs/{job_id}/status`
-
-#### Download API
-`/api/v1/jobs/{job_id}/download`
-
-
-#### Preview API
-`/api/v1/jobs/{job_id}/preview`
-
-#### WebSocket for Real-time Updates
-`/api/v1/jobs/{job_id}/progress`
-
----
-
 ## Database Schema
 
-### SQLite Schema Design
+### SQLite Schema
 
 #### Jobs Table
 ```sql
@@ -258,47 +197,6 @@ CREATE INDEX idx_jobs_status ON jobs(status);
 CREATE INDEX idx_jobs_created_at ON jobs(created_at);
 CREATE INDEX idx_jobs_updated_at ON jobs(updated_at);
 ```
-### Data Models (Pydantic)
-
-```python
-from pydantic import BaseModel, Field
-from typing import Optional, Dict, Any
-from datetime import datetime
-from enum import Enum
-
-class JobStatus(str, Enum):
-    UPLOADED = "uploaded"
-    PROCESSING = "processing"
-    COMPLETED = "completed"
-    FAILED = "failed"
-    CANCELLED = "cancelled"
-
-class JobCreate(BaseModel):
-    user_id: Optional[str] = None
-    original_filename: str
-    source_language: str = Field(..., min_length=2, max_length=10)
-    target_language: str = Field(..., min_length=2, max_length=10)
-    input_file_path: str
-
-class JobResponse(BaseModel):
-    id: str
-    user_id: Optional[str]
-    original_filename: str
-    source_language: str
-    target_language: str
-    status: JobStatus
-    input_file_path: str
-    output_file_path: Optional[str]
-    input_file_size: Optional[int]
-    output_file_size: Optional[int]
-    error_message: Optional[str]
-    job_metadata: Optional[Dict[str, Any]]
-    created_at: datetime
-    updated_at: datetime
-    completed_at: Optional[datetime]
-```
-
----
 
 ## AWS Deployment Architecture
 
@@ -328,13 +226,6 @@ graph TB
     ALB --> ECS
     ECS --> S3
 ```
-## Performance & Scalability
-
-### Performance Optimization Strategies
-
-#### 1. Async Processing Architecture
-
-#### 2. Model Caching and Optimization
 
 ## Conclusion
 
