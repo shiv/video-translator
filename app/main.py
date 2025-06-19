@@ -1,6 +1,6 @@
 """
-Main FastAPI application for AI Video Translation Service.
-This is the entry point for the web service with Phase 2 model caching.
+Main FastAPI application for AI Video Translation Service - Phase 3.
+Complete API implementation with job persistence, async processing, and WebSocket support.
 """
 
 import os
@@ -8,9 +8,14 @@ import logging
 from typing import Optional
 from fastapi import FastAPI, File, UploadFile, Form, HTTPException
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 import tempfile
 import shutil
 
+# Phase 3 imports
+from app.api.routes import job_router, websocket_router
+from app.services.database_service import get_database_service, close_database_service
+from app.services.job_queue_service import get_job_queue_service, shutdown_job_queue_service
 from app.services.translation_service import (
     TranslationService, 
     TranslationRequest, 
@@ -21,99 +26,231 @@ from app.services.translation_service import (
     MissingDependencyError,
     ConfigurationError
 )
-from app.services.util import get_env_var
 from app.services.ai_service_factory import get_ai_factory, ModelLoadingError
+from app.services.util import get_env_var
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 # Initialize FastAPI application
 app = FastAPI(
     title="AI Video Translation Service",
-    description="A service for translating videos using AI models with performance optimizations",
-    version="2.0.0",
+    description="""
+    A comprehensive service for translating videos using AI models.
+    
+    **Phase 3 Features:**
+    - Complete job management API with persistence
+    - Async video processing with queue system
+    - Real-time progress tracking via WebSocket
+    - File upload and download capabilities
+    - SQLite in-memory database for job tracking
+    - Enhanced monitoring and health checks
+    """,
+    version="3.0.0",
     docs_url="/docs",
     redoc_url="/redoc"
 )
 
-# Initialize translation service (this will also initialize the AI factory)
-translation_service = TranslationService()
+# Add CORS middleware for web frontend integration
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Configure appropriately for production
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-# Configure logging
-logger = logging.getLogger(__name__)
+# Global services (initialized during startup)
+translation_service: Optional[TranslationService] = None
 
 
 @app.on_event("startup")
 async def startup_event():
-    """Initialize the application on startup with model preloading."""
-    logger.info("Starting AI Video Translation Service...")
+    """Initialize all services on application startup."""
+    global translation_service
     
-    # Create necessary directories
-    os.makedirs("uploads", exist_ok=True)
-    os.makedirs(get_env_var("OUTPUT_DIRECTORY", "output/"), exist_ok=True)
+    logger.info("Starting AI Video Translation Service Phase 3...")
     
-    # Initialize AI Service Factory and preload models
-    ai_factory = get_ai_factory()
-    logger.info("AI Service Factory initialized")
-    
-    # Preload default models for better performance
     try:
-        ai_factory.preload_default_models()
-        logger.info("Model preloading completed")
+        # Create necessary directories
+        os.makedirs("uploads", exist_ok=True)
+        os.makedirs(get_env_var("OUTPUT_DIRECTORY", "output/"), exist_ok=True)
+        
+        # Initialize database service
+        logger.info("Initializing database service...")
+        db_service = await get_database_service()
+        logger.info("Database service initialized successfully")
+        
+        # Initialize AI Service Factory and preload models
+        logger.info("Initializing AI Service Factory...")
+        ai_factory = get_ai_factory()
+        
+        # Preload default models for better performance
+        try:
+            ai_factory.preload_default_models()
+            logger.info("Model preloading completed")
+        except Exception as e:
+            logger.warning(f"Model preloading failed (will load on-demand): {e}")
+        
+        # Initialize translation service
+        logger.info("Initializing translation service...")
+        translation_service = TranslationService()
+        logger.info("Translation service initialized")
+        
+        # Initialize job queue service
+        logger.info("Initializing job queue service...")
+        job_queue = get_job_queue_service()
+        job_queue.initialize(translation_service)
+        logger.info("Job queue service initialized")
+        
+        logger.info("✅ AI Video Translation Service Phase 3 started successfully")
+        
     except Exception as e:
-        logger.error(f"Model preloading failed: {e}")
-        # Continue startup even if preloading fails
-    
-    logger.info("AI Video Translation Service started successfully")
+        logger.error(f"❌ Failed to start application: {e}")
+        raise
 
 
 @app.on_event("shutdown")
 async def shutdown_event():
-    """Clean up resources on shutdown."""
+    """Clean up resources on application shutdown."""
     logger.info("Shutting down AI Video Translation Service...")
     
-    # Clear model cache
     try:
-        ai_factory = get_ai_factory()
-        ai_factory.clear_cache()
-        logger.info("Model cache cleared")
+        # Shutdown job queue service
+        await shutdown_job_queue_service()
+        logger.info("Job queue service shut down")
+        
+        # Close database service
+        await close_database_service()
+        logger.info("Database service closed")
+        
+        # Clear model cache
+        try:
+            ai_factory = get_ai_factory()
+            ai_factory.clear_cache()
+            logger.info("Model cache cleared")
+        except Exception as e:
+            logger.error(f"Error clearing model cache: {e}")
+        
+        logger.info("✅ AI Video Translation Service shut down successfully")
+        
     except Exception as e:
-        logger.error(f"Error clearing model cache: {e}")
-    
-    logger.info("AI Video Translation Service shut down")
+        logger.error(f"Error during shutdown: {e}")
+
+
+# Include API routers
+app.include_router(job_router)
+app.include_router(websocket_router)
 
 
 @app.get("/")
 async def root():
-    """Root endpoint with service information."""
+    """Root endpoint with comprehensive service information."""
     return {
         "message": "AI Video Translation Service",
-        "version": "2.0.0",
+        "version": "3.0.0",
+        "phase": "Phase 3 - Complete API Implementation",
         "features": [
+            "Job persistence with SQLite in-memory database",
+            "Async video processing with job queue",
+            "Real-time progress tracking via WebSocket",
+            "File upload and download capabilities",
             "Model caching and preloading",
-            "Performance optimization",
-            "Multi-language support",
-            "Video translation up to 200MB"
+            "Multi-language support (200+ languages)",
+            "Complete job lifecycle management",
+            "Enhanced monitoring and health checks"
         ],
-        "docs": "/docs",
+        "api_documentation": "/docs",
         "endpoints": {
-            "health": "/health",
-            "models": "/api/v1/models",
-            "translate": "/api/v1/translate",
-            "languages": "/api/v1/languages"
+            # Core Phase 3 endpoints
+            "upload": "POST /api/v1/upload",
+            "job_status": "GET /api/v1/jobs/{job_id}/status", 
+            "download": "GET /api/v1/jobs/{job_id}/download",
+            "preview": "GET /api/v1/jobs/{job_id}/preview",
+            "list_jobs": "GET /api/v1/jobs",
+            "cancel_job": "DELETE /api/v1/jobs/{job_id}",
+            "job_details": "GET /api/v1/jobs/{job_id}",
+            "queue_status": "GET /api/v1/queue/status",
+            
+            # WebSocket endpoints
+            "progress_websocket": "WS /api/v1/jobs/{job_id}/progress",
+            "websocket_status": "GET /api/v1/websocket/status",
+            
+            # Legacy Phase 2 endpoints (still available)
+            "health": "GET /health",
+            "models": "GET /api/v1/models",
+            "languages": "GET /api/v1/languages",
+            "translate": "POST /api/v1/translate"
+        },
+        "websocket_support": {
+            "real_time_progress": "WS /api/v1/jobs/{job_id}/progress",
+            "message_types": ["progress_update", "ping", "pong", "status_response", "error"]
         }
     }
 
 
 @app.get("/health")
 async def health_check():
-    """Comprehensive health check endpoint."""
+    """Comprehensive health check endpoint for Phase 3."""
     try:
-        health_status = translation_service.health_check()
+        health_status = {
+            "status": "healthy",
+            "version": "3.0.0",
+            "phase": "Phase 3",
+            "timestamp": os.popen('date -u +"%Y-%m-%dT%H:%M:%S.%fZ"').read().strip()
+        }
         
-        # Determine HTTP status code based on health
-        status_code = 200
-        if health_status.get("status") == "warning":
-            status_code = 200  # Warning is still OK
-        elif health_status.get("status") == "unhealthy":
-            status_code = 503  # Service Unavailable
+        # Check translation service
+        if translation_service:
+            translation_health = translation_service.health_check()
+            health_status["translation_service"] = translation_health
+        else:
+            health_status["translation_service"] = {"status": "not_initialized"}
+        
+        # Check database service
+        try:
+            db_service = await get_database_service()
+            db_health = await db_service.health_check()
+            health_status["database_service"] = db_health
+        except Exception as e:
+            health_status["database_service"] = {
+                "status": "unhealthy",
+                "error": str(e)
+            }
+        
+        # Check job queue service
+        try:
+            job_queue = get_job_queue_service()
+            queue_status = job_queue.get_queue_status()
+            health_status["job_queue_service"] = {
+                "status": "healthy",
+                **queue_status
+            }
+        except Exception as e:
+            health_status["job_queue_service"] = {
+                "status": "unhealthy",
+                "error": str(e)
+            }
+        
+        # Determine overall health status
+        service_statuses = [
+            health_status["translation_service"].get("status"),
+            health_status["database_service"].get("status"),
+            health_status["job_queue_service"].get("status")
+        ]
+        
+        if any(status == "unhealthy" for status in service_statuses):
+            health_status["status"] = "unhealthy"
+            status_code = 503
+        elif any(status == "warning" for status in service_statuses):
+            health_status["status"] = "warning"
+            status_code = 200
+        else:
+            status_code = 200
             
         return JSONResponse(
             status_code=status_code,
@@ -127,7 +264,8 @@ async def health_check():
                 "status": "unhealthy",
                 "error": f"Health check failed: {str(e)}",
                 "service": "AI Video Translation Service",
-                "version": "2.0.0"
+                "version": "3.0.0",
+                "phase": "Phase 3"
             }
         )
 
@@ -136,17 +274,19 @@ async def health_check():
 async def get_model_status():
     """
     Get status information about cached models and AI services.
-    
-    This endpoint provides detailed information about loaded models,
-    memory usage, and performance metrics.
+    (Legacy Phase 2 endpoint - maintained for compatibility)
     """
     try:
-        model_status = translation_service.get_model_status()
+        if translation_service:
+            model_status = translation_service.get_model_status()
+        else:
+            model_status = {"error": "Translation service not initialized"}
         
         return {
             "status": "success",
             "timestamp": os.popen('date -u +"%Y-%m-%dT%H:%M:%S.%fZ"').read().strip(),
-            "model_cache": model_status
+            "model_cache": model_status,
+            "note": "This is a legacy Phase 2 endpoint. Use /health for comprehensive status."
         }
         
     except Exception as e:
@@ -156,132 +296,14 @@ async def get_model_status():
         )
 
 
-@app.post("/api/v1/translate")
-async def translate_video(
-    file: UploadFile = File(..., description="Video file to translate (MP4 format, max 200MB)"),
-    target_language: str = Form(..., description="Target language for translation (ISO 639-3 code)"),
-    source_language: Optional[str] = Form(None, description="Source language (ISO 639-3 code). If not provided, will be auto-detected"),
-    tts: str = Form("mms", description="Text-to-speech engine (mms, openai, api)"),
-    stt: str = Form("auto", description="Speech-to-text engine (auto, faster-whisper, transformers)"),
-    translator: str = Form("nllb", description="Translation engine (nllb)"),
-    translator_model: str = Form("nllb-200-1.3B", description="NLLB model size (nllb-200-1.3B, nllb-200-3.3B)"),
-    stt_model: str = Form("medium", description="Whisper model size (medium, large-v2, large-v3)")
-):
-    """
-    Translate a video from source language to target language.
-    
-    This endpoint accepts a video file and translation parameters,
-    processes the video using cached AI models, and returns the translated video.
-    Performance is optimized through model caching and preloading.
-    """
-    
-    # Validate file size (200MB limit)
-    MAX_FILE_SIZE = 200 * 1024 * 1024  # 200MB in bytes
-    
-    if file.size > MAX_FILE_SIZE:
-        raise HTTPException(
-            status_code=413,
-            detail=f"File size ({file.size} bytes) exceeds maximum allowed size ({MAX_FILE_SIZE} bytes)"
-        )
-    
-    # Validate file format
-    if not file.filename.lower().endswith('.mp4'):
-        raise HTTPException(
-            status_code=400,
-            detail="Only MP4 video files are supported"
-        )
-    
-    # Create temporary file for processing
-    temp_dir = get_env_var("OUTPUT_DIRECTORY", "output/")
-    temp_file_path = None
-    
-    try:
-        # Save uploaded file to temporary location
-        temp_file_path = os.path.join(temp_dir, file.filename)
-        with open(temp_file_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-        
-        # Create translation request
-        request = TranslationRequest(
-            input_file=temp_file_path,
-            source_language=source_language,
-            target_language=target_language,
-            tts=tts,
-            stt=stt,
-            translator=translator,
-            translator_model=translator_model,
-            stt_model=stt_model,
-            output_directory=temp_dir
-        )
-        
-        # Process the translation using cached models
-        logger.info(f"Starting translation for file: {file.filename}")
-        result = translation_service.translate_video(request)
-        
-        if result.success:
-            logger.info(f"Translation completed successfully for file: {file.filename}")
-            return JSONResponse(
-                status_code=200,
-                content={
-                    "success": True,
-                    "message": "Video translation completed successfully",
-                    "result": {
-                        "audio_file": result.audio_file,
-                        "video_file": result.video_file,
-                        "processing_time_seconds": result.processing_time_seconds
-                    },
-                    "performance": {
-                        "used_cached_models": True,
-                        "processing_time_seconds": result.processing_time_seconds
-                    }
-                }
-            )
-        else:
-            logger.error(f"Translation failed for file: {file.filename}, error: {result.error_message}")
-            
-            # Determine appropriate HTTP status code based on error type
-            if "Model loading failed" in result.error_message:
-                status_code = 503  # Service Unavailable
-            elif any(keyword in result.error_message.lower() for keyword in ["language", "format", "dependency"]):
-                status_code = 400  # Bad Request
-            else:
-                status_code = 500  # Internal Server Error
-                
-            raise HTTPException(
-                status_code=status_code,
-                detail=result.error_message
-            )
-    
-    except InvalidFileFormatError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except InvalidLanguageError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except ConfigurationError as e:
-        raise HTTPException(status_code=500, detail=f"Configuration error: {str(e)}")
-    except MissingDependencyError as e:
-        raise HTTPException(status_code=500, detail=f"Missing dependency: {str(e)}")
-    except ModelLoadingError as e:
-        raise HTTPException(status_code=503, detail=f"Model loading failed: {str(e)}")
-    except TranslationServiceError as e:
-        raise HTTPException(status_code=500, detail=f"Translation service error: {str(e)}")
-    except Exception as e:
-        logger.error(f"Unexpected error during translation: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
-
-
 @app.get("/api/v1/languages")
 async def get_supported_languages():
     """
-    Get list of supported languages.
-    
-    Returns the languages supported by the translation system with enhanced
-    information about model availability and performance.
+    Get list of supported languages for translation.
+    (Legacy Phase 2 endpoint - maintained for compatibility)
     """
     try:
-        # Get model status to provide enhanced language information
-        model_status = translation_service.get_model_status()
-        
-        # Basic language support (placeholder - would be enhanced with actual model queries)
+        # Basic language support - simplified for Phase 3
         languages = {
             "source_languages": [
                 {"code": "eng", "name": "English"},
@@ -310,124 +332,79 @@ async def get_supported_languages():
         }
         
         return {
-            "supported_languages": languages,
-            "model_info": {
-                "cached_models": model_status.get("total_cached_models", 0),
-                "cache_enabled": model_status.get("cache_enabled", False),
-                "device": model_status.get("device", "unknown")
-            }
-        }
-        
-    except Exception as e:
-        logger.error(f"Error getting supported languages: {str(e)}")
-        # Return basic language list even if model status fails
-        return {
-            "supported_languages": {
-                "source_languages": [
-                    {"code": "eng", "name": "English"},
-                    {"code": "spa", "name": "Spanish"},
-                    {"code": "fra", "name": "French"}
-                ],
-                "target_languages": [
-                    {"code": "eng", "name": "English"},
-                    {"code": "spa", "name": "Spanish"},
-                    {"code": "fra", "name": "French"}
-                ]
-            },
-            "model_info": {
-                "error": "Could not retrieve model information"
-            }
-        }
-
-
-@app.post("/api/v1/models/preload")
-async def preload_models():
-    """
-    Manually trigger model preloading.
-    
-    This endpoint allows administrators to preload models without waiting
-    for the first translation request.
-    """
-    try:
-        ai_factory = get_ai_factory()
-        ai_factory.preload_default_models()
-        
-        # Get updated model status
-        model_status = translation_service.get_model_status()
-        
-        return {
-            "success": True,
-            "message": "Model preloading triggered successfully",
-            "model_status": model_status
+            "status": "success",
+            "languages": languages,
+            "note": "This is a legacy Phase 2 endpoint. Use /docs for full API documentation."
         }
         
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Model preloading failed: {str(e)}"
+            detail=f"Failed to get supported languages: {str(e)}"
         )
 
 
-@app.delete("/api/v1/models/cache")
-async def clear_model_cache():
+@app.post("/api/v1/translate")
+async def legacy_translate_video():
     """
-    Clear the model cache to free memory.
+    Legacy direct translation endpoint from Phase 1/2.
     
-    This endpoint allows administrators to clear cached models,
-    which will free memory but may slow down subsequent requests.
+    **Deprecated**: Use the new job-based API with /api/v1/upload for better
+    async processing, progress tracking, and job management.
     """
-    try:
-        ai_factory = get_ai_factory()
-        ai_factory.clear_cache()
-        
-        return {
-            "success": True,
-            "message": "Model cache cleared successfully",
-            "note": "Subsequent requests may be slower until models are reloaded"
+    return JSONResponse(
+        status_code=410,
+        content={
+            "error": "Endpoint deprecated",
+            "message": "Direct translation endpoint has been deprecated in Phase 3",
+            "alternative": "Use POST /api/v1/upload for job-based async processing",
+            "documentation": "/docs",
+            "migration_guide": {
+                "old_flow": "POST /api/v1/translate → immediate response",
+                "new_flow": "POST /api/v1/upload → GET /api/v1/jobs/{job_id}/status → GET /api/v1/jobs/{job_id}/download"
+            }
         }
-        
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to clear model cache: {str(e)}"
-        )
+    )
 
 
-# Enhanced error handlers
+# Global exception handlers
 @app.exception_handler(404)
 async def not_found_handler(request, exc):
+    """Custom 404 handler with helpful information."""
     return JSONResponse(
         status_code=404,
         content={
-            "error": "Not found",
-            "message": "The requested resource was not found",
-            "service": "AI Video Translation Service",
-            "version": "2.0.0"
+            "error": "Not Found",
+            "message": "The requested endpoint was not found",
+            "available_endpoints": "/docs",
+            "service": "AI Video Translation Service v3.0.0"
         }
     )
 
 
 @app.exception_handler(500)
 async def internal_error_handler(request, exc):
+    """Custom 500 handler with service information."""
+    logger.error(f"Internal server error: {exc}")
     return JSONResponse(
         status_code=500,
         content={
-            "error": "Internal server error",
+            "error": "Internal Server Error",
             "message": "An unexpected error occurred",
-            "service": "AI Video Translation Service",
-            "version": "2.0.0"
+            "service": "AI Video Translation Service v3.0.0",
+            "support": "Check /health endpoint for service status"
         }
     )
 
 
+# Run the application (for development)
 if __name__ == "__main__":
     import uvicorn
     
-    # Get configuration from environment
     host = get_env_var("HOST", "0.0.0.0")
     port = int(get_env_var("PORT", "8000"))
     
-    # Run the application
+    logger.info(f"Starting development server on {host}:{port}")
     uvicorn.run(
         "app.main:app",
         host=host,
