@@ -9,15 +9,10 @@ import transformers
 from iso639 import Lang
 
 from app import logger
-from app.services.processing.dubbing import Dubber, PostprocessingArtifacts
+from app.services.processing.dubbing import Dubber
 from app.services.processing.ffmpeg import FFmpeg
-from app.services.stt.speech_to_text_faster_whisper import SpeechToTextFasterWhisper
-from app.services.stt.speech_to_text_whisper_transformers import SpeechToTextWhisperTransformers
-from app.services.tts.text_to_speech_api import TextToSpeechAPI
-from app.services.tts.text_to_speech_mms import TextToSpeechMMS
-from app.services.translation.translation_nllb import TranslationNLLB
-from app.services.tts.text_to_speech_openai import TextToSpeechOpenAI
 from app.services.util import get_env_var
+from app.services.ai_service_factory import get_ai_factory, ModelLoadingError
 
 @dataclass
 class TranslationRequest:
@@ -69,13 +64,14 @@ class ConfigurationError(TranslationServiceError):
 
 
 class TranslationService:
-    """Service for translating videos using AI models."""
+    """Service for translating videos using AI models with performance optimizations."""
     
     ACCEPTED_VIDEO_FORMATS = ["mp4"]
     
     def __init__(self):
-        """Initialize the translation service."""
+        """Initialize the translation service with AI Service Factory."""
         self._init_logging()
+        self._ai_factory = get_ai_factory()
         
     def _init_logging(self):
         """Initialize logging configuration."""
@@ -104,29 +100,7 @@ class TranslationService:
     
     def _get_env_var(self, var_name: str, default_value, var_type=str, choices=None):
         """Get environment variable with type conversion and validation."""
-        value = os.getenv(var_name)
-        
-        if value is None:
-            return default_value
-        
-        # Type conversion
-        if var_type == bool:
-            return value.lower() in ('true', '1', 'yes', 'on')
-        elif var_type == int:
-            try:
-                value = int(value)
-            except ValueError:
-                logger().warning(f"Invalid integer value for {var_name}: {value}. Using default: {default_value}")
-                return default_value
-        elif var_type == str:
-            pass  # No conversion needed
-        
-        # Validate choices if provided
-        if choices and value not in choices:
-            logger().warning(f"Invalid choice for {var_name}: {value}. Valid choices: {choices}. Using default: {default_value}")
-            return default_value
-        
-        return value
+        return get_env_var(var_name, default_value, var_type, choices)
     
     def _get_hugging_face_token(self) -> str:
         """Get Hugging Face token from environment variable."""
@@ -152,28 +126,18 @@ class TranslationService:
             raise MissingDependencyError("FFmpeg (which includes ffprobe) must be installed.")
     
     def _get_selected_tts(self, selected_tts: str, device: str):
-        """Get the selected TTS service."""
-        if selected_tts == "mms":
-            return TextToSpeechMMS(device)
-        elif selected_tts == "api":
-            tts_api_server = get_env_var("TTS_API_SERVER", "")
-            if not tts_api_server:
-                raise ConfigurationError("When using TTS API, you need to set the TTS_API_SERVER environment variable")
-            return TextToSpeechAPI(device, tts_api_server)
-        elif selected_tts == "openai":
-            key = self._get_openai_key()
-            return TextToSpeechOpenAI(device=device, api_key=key)
-        else:
-            raise ConfigurationError(f"Invalid TTS value: {selected_tts}")
+        """Get the selected TTS service using AI Service Factory."""
+        try:
+            return self._ai_factory.get_tts_service(selected_tts)
+        except Exception as e:
+            raise ConfigurationError(f"Failed to create TTS service '{selected_tts}': {str(e)}")
     
     def _get_selected_translator(self, translator: str, translator_model: str, device: str):
-        """Get the selected translator service."""
-        if translator == "nllb":
-            translation = TranslationNLLB(device)
-            translation.load_model(translator_model)
-            return translation
-        else:
-            raise ConfigurationError(f"Invalid translator value: {translator}")
+        """Get the selected translator service using AI Service Factory."""
+        try:
+            return self._ai_factory.get_translation_service(translator, translator_model)
+        except Exception as e:
+            raise ConfigurationError(f"Failed to create translation service '{translator}': {str(e)}")
     
     def _get_openai_key(self) -> str:
         """Get OpenAI API key from environment variable."""
@@ -210,7 +174,7 @@ class TranslationService:
     
     def translate_video(self, request: TranslationRequest) -> TranslationResult:
         """
-        Translate a video from source language to target language.
+        Translate a video from source language to target language using cached models.
         
         Args:
             request: TranslationRequest containing all necessary parameters
@@ -228,7 +192,6 @@ class TranslationService:
             
             # Get configuration from environment variables
             output_directory = request.output_directory or get_env_var("OUTPUT_DIRECTORY", "output/")
-            print("output_directory", output_directory)
             device = get_env_var("DEVICE", "cpu", str, ["cpu", "cuda"])
             cpu_threads = get_env_var("CPU_THREADS", 0, int)
             vad = get_env_var("VAD", False, bool)
@@ -236,41 +199,46 @@ class TranslationService:
             
             hugging_face_token = self._get_hugging_face_token()
             
-            # Initialize services
-            tts = self._get_selected_tts(request.tts, device)
+            # Initialize services using AI Service Factory (with caching)
+            logger().info(f"Initializing AI services with caching...")
+            
+            try:
+                tts = self._get_selected_tts(request.tts, device)
+                logger().info(f"TTS service '{request.tts}' initialized")
+            except Exception as e:
+                raise ConfigurationError(f"Failed to initialize TTS service: {str(e)}")
             
             # Platform-specific configuration
             if sys.platform == "darwin":
                 os.environ["TOKENIZERS_PARALLELISM"] = "false"
             
-            # Initialize STT service
-            stt_type = request.stt
-            if stt_type == "faster-whisper" or (stt_type == "auto" and sys.platform != "darwin"):
-                stt = SpeechToTextFasterWhisper(
-                    model_name=request.stt_model,
-                    device=device,
-                    cpu_threads=cpu_threads,
-                    vad=vad,
-                )
-            else:
-                stt = SpeechToTextWhisperTransformers(
-                    model_name=request.stt_model,
-                    device=device,
-                    cpu_threads=cpu_threads,
-                )
-                if vad:
-                    logger().warning("VAD filter is only supported in faster-whisper Speech to Text library")
-            
-            stt.load_model()
+            # Initialize STT service using AI Service Factory (with caching)
+            try:
+                stt = self._ai_factory.get_stt_service(request.stt, request.stt_model)
+                logger().info(f"STT service '{request.stt}' with model '{request.stt_model}' initialized")
+                
+                # Ensure model is loaded for STT services that need explicit loading
+                if hasattr(stt, 'load_model') and stt._model is None:
+                    stt.load_model()
+                    
+            except Exception as e:
+                raise ConfigurationError(f"Failed to initialize STT service: {str(e)}")
             
             # Auto-detect source language if not provided
             source_language = request.source_language
             if not source_language:
-                source_language = stt.detect_language(request.input_file)
-                logger().info(f"Detected language '{source_language}'")
+                try:
+                    source_language = stt.detect_language(request.input_file)
+                    logger().info(f"Auto-detected source language: '{source_language}'")
+                except Exception as e:
+                    raise ConfigurationError(f"Failed to auto-detect source language: {str(e)}")
             
-            # Initialize translation service
-            translation = self._get_selected_translator(request.translator, request.translator_model, device)
+            # Initialize translation service using AI Service Factory (with caching)
+            try:
+                translation = self._get_selected_translator(request.translator, request.translator_model, device)
+                logger().info(f"Translation service '{request.translator}' with model '{request.translator_model}' initialized")
+            except Exception as e:
+                raise ConfigurationError(f"Failed to initialize translation service: {str(e)}")
             
             # Validate language support
             self._check_languages(source_language, request.target_language, tts, translation, stt)
@@ -294,10 +262,12 @@ class TranslationService:
                 clean_intermediate_files=clean_intermediate_files,
             )
             
-            logger().info(f"Processing '{request.input_file}' file with STT '{stt_type}', TTS '{request.tts}' and device '{device}'")
+            logger().info(f"Processing '{request.input_file}' file with STT '{request.stt}', TTS '{request.tts}' and device '{device}'")
             result = dubber.dub()
             
             processing_time = time.time() - start_time
+            
+            logger().info(f"Video translation completed successfully in {processing_time:.2f}s")
             
             return TranslationResult(
                 success=True,
@@ -306,13 +276,91 @@ class TranslationService:
                 processing_time_seconds=processing_time
             )
             
-        except Exception as e:
+        except (InvalidLanguageError, InvalidFileFormatError, MissingDependencyError, ConfigurationError) as e:
+            # Known service errors
             processing_time = time.time() - start_time
             error_message = str(e)
-            logger().error(f"Translation failed: {error_message}")
+            logger().error(f"Translation service error: {error_message}")
             
             return TranslationResult(
                 success=False,
                 error_message=error_message,
                 processing_time_seconds=processing_time
-            ) 
+            )
+            
+        except ModelLoadingError as e:
+            # Model loading specific errors
+            processing_time = time.time() - start_time
+            error_message = f"Model loading failed: {str(e)}"
+            logger().error(error_message)
+            
+            return TranslationResult(
+                success=False,
+                error_message=error_message,
+                processing_time_seconds=processing_time
+            )
+            
+        except Exception as e:
+            # Unexpected errors
+            processing_time = time.time() - start_time
+            error_message = f"Unexpected error: {str(e)}"
+            logger().error(f"Translation failed with unexpected error: {error_message}")
+            
+            return TranslationResult(
+                success=False,
+                error_message=error_message,
+                processing_time_seconds=processing_time
+            )
+    
+    def get_model_status(self) -> Dict[str, Any]:
+        """
+        Get status information about cached models.
+        
+        Returns:
+            Dictionary containing model cache statistics and health information
+        """
+        return self._ai_factory.get_model_status()
+    
+    def health_check(self) -> Dict[str, Any]:
+        """
+        Perform a comprehensive health check of the translation service.
+        
+        Returns:
+            Dictionary containing health status and diagnostic information
+        """
+        try:
+            # Check AI Service Factory health
+            factory_health = self._ai_factory.health_check()
+            
+            # Check basic service health
+            service_health = {
+                "translation_service": "healthy",
+                "ffmpeg_available": FFmpeg.is_ffmpeg_installed(),
+                "hugging_face_token_configured": bool(os.getenv("HUGGING_FACE_TOKEN") or os.getenv("HF_TOKEN")),
+                "accepted_video_formats": self.ACCEPTED_VIDEO_FORMATS
+            }
+            
+            # Combine health checks
+            overall_status = "healthy"
+            if factory_health.get("status") != "healthy":
+                overall_status = factory_health.get("status", "unhealthy")
+            elif not service_health["ffmpeg_available"]:
+                overall_status = "warning"
+                service_health["warning"] = "FFmpeg not available"
+            elif not service_health["hugging_face_token_configured"]:
+                overall_status = "warning"
+                service_health["warning"] = "Hugging Face token not configured"
+            
+            return {
+                "status": overall_status,
+                "ai_service_factory": factory_health,
+                "translation_service": service_health
+            }
+            
+        except Exception as e:
+            return {
+                "status": "unhealthy",
+                "error": str(e),
+                "ai_service_factory": {"status": "unknown"},
+                "translation_service": {"status": "error"}
+            }
