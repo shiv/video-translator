@@ -1,14 +1,16 @@
 """
-Main FastAPI application for AI Video Translation Service - Phase 3.
-Complete API implementation with job persistence, async processing, and WebSocket support.
+Main FastAPI application for AI Video Translation Service - Phase 5.
+Complete API implementation with frontend interface for demo.
 """
 
 import os
 import logging
 from typing import Optional
-from fastapi import FastAPI, File, UploadFile, Form, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, File, UploadFile, Form, HTTPException, Request
+from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 import tempfile
 import shutil
 
@@ -42,15 +44,18 @@ app = FastAPI(
     description="""
     A comprehensive service for translating videos using AI models.
     
-    **Phase 3 Features:**
+    **Phase 5 Features:**
+    - Complete web frontend interface
+    - Drag & drop file upload
+    - Real-time progress tracking via WebSocket
+    - Job status management with copyable Job IDs
+    - Video preview and download capabilities
+    - Responsive design for mobile and desktop
     - Complete job management API with persistence
     - Async video processing with queue system
-    - Real-time progress tracking via WebSocket
-    - File upload and download capabilities
-    - SQLite in-memory database for job tracking
     - Enhanced monitoring and health checks
     """,
-    version="3.0.0",
+    version="5.0.0",
     docs_url="/docs",
     redoc_url="/redoc"
 )
@@ -64,6 +69,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Mount static files and templates
+app.mount("/static", StaticFiles(directory="static"), name="static")
+templates = Jinja2Templates(directory="templates")
+
 # Global services (initialized during startup)
 translation_service: Optional[TranslationService] = None
 
@@ -73,12 +82,14 @@ async def startup_event():
     """Initialize all services on application startup."""
     global translation_service
     
-    logger.info("Starting AI Video Translation Service Phase 3...")
+    logger.info("Starting AI Video Translation Service Phase 5...")
     
     try:
         # Create necessary directories
         os.makedirs("uploads", exist_ok=True)
         os.makedirs(get_env_var("OUTPUT_DIRECTORY", "output/"), exist_ok=True)
+        os.makedirs("static", exist_ok=True)
+        os.makedirs("templates", exist_ok=True)
         
         # Initialize database service
         logger.info("Initializing database service...")
@@ -107,7 +118,7 @@ async def startup_event():
         job_queue.initialize(translation_service)
         logger.info("Job queue service initialized")
         
-        logger.info("✅ AI Video Translation Service Phase 3 started successfully")
+        logger.info("✅ AI Video Translation Service Phase 5 started successfully")
         
     except Exception as e:
         logger.error(f"❌ Failed to start application: {e}")
@@ -147,23 +158,65 @@ app.include_router(job_router)
 app.include_router(websocket_router)
 
 
-@app.get("/")
+# Phase 5: Frontend Routes
+@app.get("/", response_class=HTMLResponse)
+async def frontend_home(request: Request):
+    """
+    Serve the main frontend interface.
+    
+    This is the primary entry point for users to interact with the video translation service.
+    """
+    return templates.TemplateResponse("index.html", {"request": request})
+
+
+@app.get("/job/{job_id}", response_class=HTMLResponse)
+async def frontend_job_status(request: Request, job_id: str):
+    """
+    Serve the frontend with a specific job ID pre-loaded.
+    
+    This allows users to bookmark or share direct links to specific translation jobs.
+    """
+    return templates.TemplateResponse("index.html", {
+        "request": request, 
+        "job_id": job_id
+    })
+
+
+@app.get("/app", response_class=HTMLResponse)
+async def frontend_app(request: Request):
+    """
+    Alternative route to access the frontend application.
+    """
+    return templates.TemplateResponse("index.html", {"request": request})
+
+
+@app.get("/status")
 async def root():
-    """Root endpoint with comprehensive service information."""
+    """Root endpoint with comprehensive Phase 5 service information."""
     return {
         "message": "AI Video Translation Service",
-        "version": "3.0.0",
-        "phase": "Phase 3 - Complete API Implementation",
+        "version": "5.0.0",
+        "phase": "Phase 5 - Complete Frontend Interface",
         "features": [
-            "Job persistence with SQLite in-memory database",
-            "Async video processing with job queue",
-            "Real-time progress tracking via WebSocket",
-            "File upload and download capabilities",
-            "Model caching and preloading",
-            "Multi-language support (200+ languages)",
-            "Complete job lifecycle management",
-            "Enhanced monitoring and health checks"
+            "✅ Complete web frontend interface",
+            "✅ Drag & drop file upload with validation",
+            "✅ Real-time progress tracking via WebSocket",
+            "✅ Job status management with copyable Job IDs",
+            "✅ Video preview and download capabilities",
+            "✅ Responsive design for mobile and desktop",
+            "✅ Job persistence with SQLite in-memory database",
+            "✅ Async video processing with job queue",
+            "✅ File upload and download capabilities",
+            "✅ Model caching and preloading",
+            "✅ Multi-language support (200+ languages)",
+            "✅ Complete job lifecycle management",
+            "✅ Enhanced monitoring and health checks"
         ],
+        "frontend_urls": {
+            "main_interface": "/",
+            "job_tracking": "/job/{job_id}",
+            "alternative_app": "/app"
+        },
         "api_documentation": "/docs",
         "endpoints": {
             # Core Phase 3 endpoints
@@ -180,28 +233,45 @@ async def root():
             "progress_websocket": "WS /api/v1/jobs/{job_id}/progress",
             "websocket_status": "GET /api/v1/websocket/status",
             
+            # Phase 5 Frontend
+            "frontend_home": "GET /",
+            "frontend_job": "GET /job/{job_id}",
+            
             # Legacy Phase 2 endpoints (still available)
             "health": "GET /health",
             "models": "GET /api/v1/models",
-            "languages": "GET /api/v1/languages",
-            "translate": "POST /api/v1/translate"
+            "languages": "GET /api/v1/languages"
         },
         "websocket_support": {
             "real_time_progress": "WS /api/v1/jobs/{job_id}/progress",
             "message_types": ["progress_update", "ping", "pong", "status_response", "error"]
+        },
+        "frontend_features": {
+            "file_upload": "Drag & drop or browse for MP4 files (max 200MB)",
+            "real_time_tracking": "WebSocket-based progress updates",
+            "job_management": "Copyable job IDs, status checking, cancellation",
+            "download_preview": "Video preview and download capabilities",
+            "responsive_design": "Mobile and desktop optimized",
+            "error_handling": "User-friendly error messages and notifications"
         }
     }
 
 
 @app.get("/health")
 async def health_check():
-    """Comprehensive health check endpoint for Phase 3."""
+    """Comprehensive health check endpoint for Phase 5."""
     try:
         health_status = {
             "status": "healthy",
-            "version": "3.0.0",
-            "phase": "Phase 3",
-            "timestamp": os.popen('date -u +"%Y-%m-%dT%H:%M:%S.%fZ"').read().strip()
+            "version": "5.0.0",
+            "phase": "Phase 5",
+            "timestamp": os.popen('date -u +"%Y-%m-%dT%H:%M:%S.%fZ"').read().strip(),
+            "frontend": {
+                "status": "active",
+                "static_files": os.path.exists("static"),
+                "templates": os.path.exists("templates"),
+                "main_interface": "/"
+            }
         }
         
         # Check translation service
@@ -264,8 +334,8 @@ async def health_check():
                 "status": "unhealthy",
                 "error": f"Health check failed: {str(e)}",
                 "service": "AI Video Translation Service",
-                "version": "3.0.0",
-                "phase": "Phase 3"
+                "version": "5.0.0",
+                "phase": "Phase 5"
             }
         )
 
@@ -303,7 +373,7 @@ async def get_supported_languages():
     (Legacy Phase 2 endpoint - maintained for compatibility)
     """
     try:
-        # Basic language support - simplified for Phase 3
+        # Basic language support - simplified for Phase 5
         languages = {
             "source_languages": [
                 {"code": "eng", "name": "English"},
@@ -350,18 +420,23 @@ async def legacy_translate_video():
     Legacy direct translation endpoint from Phase 1/2.
     
     **Deprecated**: Use the new job-based API with /api/v1/upload for better
-    async processing, progress tracking, and job management.
+    async processing, progress tracking, and job management. 
+    Or use the frontend interface at / for a complete user experience.
     """
     return JSONResponse(
         status_code=410,
         content={
             "error": "Endpoint deprecated",
-            "message": "Direct translation endpoint has been deprecated in Phase 3",
-            "alternative": "Use POST /api/v1/upload for job-based async processing",
+            "message": "Direct translation endpoint has been deprecated in Phase 5",
+            "alternatives": {
+                "job_based_api": "Use POST /api/v1/upload for job-based async processing",
+                "frontend_interface": "Use / for complete web interface with drag & drop upload"
+            },
             "documentation": "/docs",
             "migration_guide": {
                 "old_flow": "POST /api/v1/translate → immediate response",
-                "new_flow": "POST /api/v1/upload → GET /api/v1/jobs/{job_id}/status → GET /api/v1/jobs/{job_id}/download"
+                "new_api_flow": "POST /api/v1/upload → GET /api/v1/jobs/{job_id}/status → GET /api/v1/jobs/{job_id}/download",
+                "new_frontend_flow": "Visit / → upload file → track progress → download result"
             }
         }
     )
@@ -377,7 +452,8 @@ async def not_found_handler(request, exc):
             "error": "Not Found",
             "message": "The requested endpoint was not found",
             "available_endpoints": "/docs",
-            "service": "AI Video Translation Service v3.0.0"
+            "frontend_interface": "/",
+            "service": "AI Video Translation Service v5.0.0"
         }
     )
 
@@ -391,8 +467,9 @@ async def internal_error_handler(request, exc):
         content={
             "error": "Internal Server Error",
             "message": "An unexpected error occurred",
-            "service": "AI Video Translation Service v3.0.0",
-            "support": "Check /health endpoint for service status"
+            "service": "AI Video Translation Service v5.0.0",
+            "support": "Check /health endpoint for service status",
+            "frontend": "Try the web interface at /"
         }
     )
 
@@ -404,7 +481,8 @@ if __name__ == "__main__":
     host = get_env_var("HOST", "0.0.0.0")
     port = int(get_env_var("PORT", "8000"))
     
-    logger.info(f"Starting development server on {host}:{port}")
+    logger.info(f"Starting Phase 5 development server on {host}:{port}")
+    logger.info(f"Frontend interface will be available at: http://{host}:{port}/")
     uvicorn.run(
         "app.main:app",
         host=host,
