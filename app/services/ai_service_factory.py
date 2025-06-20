@@ -442,8 +442,8 @@ class AIServiceFactory:
         start_time = time.time()
         
         # Get default model names from environment variables
-        default_stt_model = get_env_var("DEFAULT_STT_MODEL")
-        default_translation_model = get_env_var("DEFAULT_TRANSLATION_MODEL")
+        default_stt_model = get_env_var("DEFAULT_STT_MODEL", "medium")
+        default_translation_model = get_env_var("DEFAULT_TRANSLATION_MODEL", "nllb-200-distilled-600M")
         
         # Default models to preload
         default_models = [

@@ -38,12 +38,8 @@ COPY . .
 
 # Create necessary directories and set permissions
 RUN mkdir -p /app/uploads /app/output /app/static /app/templates /app/logs && \
-    mkdir -p /home/app/.cache/huggingface && \
-    chown -R app:app /app && \
-    chown -R app:app /home/app
-
-# Switch to non-root user
-USER app
+    mkdir -p /root/.cache/huggingface && \
+    chmod -R 777 /app
 
 # Expose port
 EXPOSE 8000
