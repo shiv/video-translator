@@ -17,7 +17,7 @@ class UploadRequest(BaseModel):
     stt_model: str = Field("medium", description="Whisper model size (medium, large-v2, large-v3)")
     translation_engine: str = Field("nllb", description="Translation engine (nllb)")
     translation_model: str = Field("nllb-200-1.3B", description="NLLB model size (nllb-200-1.3B)")
-    tts_engine: str = Field("mms", description="Text-to-speech engine (mms, openai, api)")
+    tts_engine: str = Field("mms", description="Text-to-speech engine (mms)")
 
 
 class UploadResponse(BaseModel):

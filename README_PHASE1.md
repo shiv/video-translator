@@ -95,7 +95,7 @@ POST /api/v1/translate
 - `file`: Video file (MP4, max 200MB)
 - `target_language`: Target language (ISO 639-3 code)
 - `source_language`: Source language (optional, auto-detected if not provided)
-- `tts`: Text-to-speech engine (`mms`, `openai`, `api`)
+- `tts`: Text-to-speech engine (`mms`)
 - `stt`: Speech-to-text engine (`auto`, `faster-whisper`, `transformers`)
 - `translator`: Translation engine (`nllb`)
 - `nllb_model`: NLLB model size (`nllb-200-1.3B`, `nllb-200-3.3B`)
@@ -121,17 +121,7 @@ Visit `http://localhost:8000/docs` for Swagger UI documentation.
 | `HOST` | `0.0.0.0` | Server host |
 | `PORT` | `8000` | Server port |
 
-### TTS-Specific Configuration
 
-#### OpenAI TTS
-```bash
-export OPENAI_API_KEY="your_openai_key"
-```
-
-#### Custom TTS API
-```bash
-export TTS_API_SERVER="http://your-tts-api-server"
-```
 
 ## 🧪 Testing
 

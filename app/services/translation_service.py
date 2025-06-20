@@ -139,13 +139,6 @@ class TranslationService:
         except Exception as e:
             raise ConfigurationError(f"Failed to create translation service '{translator}': {str(e)}")
     
-    def _get_openai_key(self) -> str:
-        """Get OpenAI API key from environment variable."""
-        key = os.getenv("OPENAI_API_KEY")
-        if not key:
-            raise ConfigurationError("OpenAI TTS selected but no key has been defined in the environment variable OPENAI_API_KEY")
-        return key
-    
     def _check_languages(self, source_language: str, target_language: str, tts, translation, stt) -> None:
         """Validate language support across all services."""
         spt = stt.get_languages()

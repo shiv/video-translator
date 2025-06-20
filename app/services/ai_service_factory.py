@@ -23,8 +23,6 @@ from app.services.util import get_env_var
 from app.services.stt.speech_to_text_faster_whisper import SpeechToTextFasterWhisper
 from app.services.stt.speech_to_text_whisper_transformers import SpeechToTextWhisperTransformers
 from app.services.tts.text_to_speech_mms import TextToSpeechMMS
-from app.services.tts.text_to_speech_openai import TextToSpeechOpenAI
-from app.services.tts.text_to_speech_api import TextToSpeechAPI
 from app.services.translation.translation_nllb import TranslationNLLB
 
 
@@ -91,7 +89,7 @@ class AIServiceFactory:
             self._vad = get_env_var("VAD", False, bool)
             self._hugging_face_token = self._get_hugging_face_token()
             self._cache_enabled = get_env_var("MODEL_CACHE_ENABLED", True, bool)
-            self._preload_models = get_env_var("PRELOAD_MODELS", True, bool)
+            self._preload_models = get_env_var("PRELOAD_MODELS", False, bool)
             self._initialized = True
             
             # Platform-specific optimizations
@@ -386,7 +384,7 @@ class AIServiceFactory:
         Get a Text-to-Speech service with cached model info.
         
         Args:
-            tts_type: Type of TTS service ("mms", "openai", "api")
+            tts_type: Type of TTS service ("mms")
             
         Returns:
             Configured TTS service instance
@@ -409,20 +407,6 @@ class AIServiceFactory:
             service._cached_model_info = cached_model.model
             
             return service
-            
-        elif tts_type == "openai":
-            # OpenAI TTS doesn't need model caching
-            openai_key = os.getenv("OPENAI_API_KEY")
-            if not openai_key:
-                raise ValueError("OpenAI API key required for OpenAI TTS")
-            return TextToSpeechOpenAI(device=self._device, api_key=openai_key)
-            
-        elif tts_type == "api":
-            # Custom TTS API doesn't need model caching
-            api_server = get_env_var("TTS_API_SERVER", "")
-            if not api_server:
-                raise ValueError("TTS_API_SERVER environment variable required for API TTS")
-            return TextToSpeechAPI(self._device, api_server)
         
         else:
             raise ValueError(f"Unsupported TTS type: {tts_type}")
@@ -442,7 +426,7 @@ class AIServiceFactory:
         start_time = time.time()
         
         # Get default model names from environment variables
-        default_stt_model = get_env_var("DEFAULT_STT_MODEL", "medium")
+        default_stt_model = get_env_var("DEFAULT_STT_MODEL", "tiny")
         default_translation_model = get_env_var("DEFAULT_TRANSLATION_MODEL", "nllb-200-distilled-600M")
         
         # Default models to preload

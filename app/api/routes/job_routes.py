@@ -36,7 +36,7 @@ async def upload_video(
     stt_model: str = Form("medium", description="Whisper model size (medium, large-v2, large-v3)"),
     translation_engine: str = Form("nllb", description="Translation engine (nllb)"),
     translation_model: str = Form("nllb-200-1.3B", description="NLLB model size (nllb-200-1.3B)"),
-    tts_engine: str = Form("mms", description="Text-to-speech engine (mms, openai, api)")
+    tts_engine: str = Form("mms", description="Text-to-speech engine (mms)")
 ):
     """
     Upload a video file for translation and create a processing job.
