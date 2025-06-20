@@ -10,8 +10,8 @@ from fastapi import APIRouter, File, UploadFile, Form, HTTPException, Query, Req
 from fastapi.responses import FileResponse, JSONResponse
 from datetime import datetime
 
-from app.models.job_models import Job, JobCreate, JobUpdate, JobResponse, JobMetadata
-from app.models.translation_models import UploadRequest, UploadResponse, JobListResponse
+from app.models.job_models import JobCreate, JobUpdate, JobResponse, JobMetadata
+from app.models.translation_models import UploadResponse, JobListResponse
 from app.services.database_service import get_database_service
 from app.services.job_queue_service import get_job_queue_service
 from app.services.util import get_env_var
@@ -22,8 +22,8 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1", tags=["jobs"])
 
-# File size limit (200MB)
-MAX_FILE_SIZE = 200 * 1024 * 1024
+# File size limit - configurable via environment variable
+MAX_FILE_SIZE = get_env_var("MAX_FILE_SIZE_MB", 200, int) * 1024 * 1024
 
 
 @router.post("/upload", response_model=UploadResponse)

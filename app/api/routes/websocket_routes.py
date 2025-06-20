@@ -13,10 +13,14 @@ from datetime import datetime
 from app.models.job_models import ProgressUpdate
 from app.services.database_service import get_database_service
 from app.services.job_queue_service import get_job_queue_service
+from app.services.util import get_env_var
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1", tags=["websockets"])
+
+# WebSocket configuration from environment variables
+WEBSOCKET_PING_INTERVAL = get_env_var("WEBSOCKET_PING_INTERVAL", 30, int)
 
 
 class WebSocketManager:
@@ -154,7 +158,7 @@ async def websocket_job_progress(websocket: WebSocket, job_id: str):
             while True:
                 # Wait for messages from client (for keep-alive or commands)
                 try:
-                    data = await asyncio.wait_for(websocket.receive_text(), timeout=30.0)
+                    data = await asyncio.wait_for(websocket.receive_text(), timeout=float(WEBSOCKET_PING_INTERVAL))
                     
                     # Handle client messages
                     try:

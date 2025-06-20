@@ -5,15 +5,16 @@ Handles job scheduling, progress tracking, and WebSocket notifications.
 
 import asyncio
 import logging
-from typing import Dict, List, Optional, Callable, Any
-from datetime import datetime
 import time
 import os
+from typing import Dict, List, Optional, Callable, Any
+from datetime import datetime
 
 from app.models.job_models import Job, JobUpdate, ProgressUpdate
 # Import the original TranslationRequest dataclass from translation_service
 from app.services.translation_service import TranslationService, TranslationRequest as ServiceTranslationRequest
 from app.services.database_service import get_database_service
+from app.services.util import get_env_var
 
 logger = logging.getLogger(__name__)
 
@@ -238,7 +239,11 @@ class JobQueueService:
     In-memory job queue service for managing async video translation jobs.
     """
     
-    def __init__(self, max_concurrent_jobs: int = 2):
+    def __init__(self, max_concurrent_jobs: Optional[int] = None):
+        # Use environment variable or default to 2
+        if max_concurrent_jobs is None:
+            max_concurrent_jobs = get_env_var("MAX_CONCURRENT_JOBS", 2, int)
+        
         self.max_concurrent_jobs = max_concurrent_jobs
         self.job_queue: asyncio.Queue = asyncio.Queue()
         self.active_jobs: Dict[str, asyncio.Task] = {}
