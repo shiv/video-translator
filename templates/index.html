@@ -103,17 +103,16 @@
                                         <div class="form-group">
                                             <label for="sttModel">Speech Recognition Model</label>
                                             <select id="sttModel" name="stt_model">
-                                                <option value="medium">Medium (Balanced)</option>
-                                                <option value="large-v2">Large v2 (Better accuracy)</option>
-                                                <option value="large-v3">Large v3 (Best accuracy)</option>
+                                                <option value="tiny">Tiny (Lowest memory usage)</option>
+                                                <option value="small">Small (Balanced)</option>
+                                                <option value="medium">Medium (Best accuracy)</option>
                                             </select>
                                         </div>
 
                                         <div class="form-group">
                                             <label for="translationModel">Translation Model</label>
                                             <select id="translationModel" name="translation_model">
-                                                <option value="nllb-200-1.3B">NLLB 1.3B (Faster)</option>
-                                                <option value="nllb-200-3.3B">NLLB 3.3B (Better quality)</option>
+                                                <option value="nllb-200-distilled-600M">NLLB 600M (Faster)</option>
                                             </select>
                                         </div>
                                     </div>

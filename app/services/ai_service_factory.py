@@ -441,12 +441,16 @@ class AIServiceFactory:
         logger().info("Starting model preloading...")
         start_time = time.time()
         
+        # Get default model names from environment variables
+        default_stt_model = get_env_var("DEFAULT_STT_MODEL")
+        default_translation_model = get_env_var("DEFAULT_TRANSLATION_MODEL")
+        
         # Default models to preload
         default_models = [
             # STT models
             ModelConfig(
                 model_type=ModelType.STT_WHISPER,
-                model_name="medium",
+                model_name=default_stt_model,
                 device=self._device,
                 cache_key="",
                 cpu_threads=self._cpu_threads,
@@ -455,7 +459,7 @@ class AIServiceFactory:
             # Translation models
             ModelConfig(
                 model_type=ModelType.TRANSLATION_NLLB,
-                model_name="nllb-200-1.3B",
+                model_name=default_translation_model,
                 device=self._device,
                 cache_key=""
             ),

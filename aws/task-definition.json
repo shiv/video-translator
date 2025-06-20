@@ -1,0 +1,78 @@
+{
+  "family": "ai-video-translation-task",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "2048",
+  "memory": "8192",
+  "executionRoleArn": "arn:aws:iam::YOUR_ACCOUNT_ID:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::YOUR_ACCOUNT_ID:role/ai-video-translation-task-role",
+  "containerDefinitions": [
+    {
+      "name": "ai-video-translation",
+      "image": "YOUR_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/ai-video-translation:latest",
+      "portMappings": [
+        {
+          "containerPort": 8000,
+          "protocol": "tcp"
+        }
+      ],
+      "essential": true,
+      "environment": [
+        {
+          "name": "HOST",
+          "value": "0.0.0.0"
+        },
+        {
+          "name": "PORT",
+          "value": "8000"
+        },
+        {
+          "name": "AWS_REGION",
+          "value": "us-east-1"
+        },
+        {
+          "name": "OUTPUT_DIRECTORY",
+          "value": "/app/output"
+        },
+        {
+          "name": "UPLOAD_DIRECTORY",
+          "value": "/app/uploads"
+        }
+      ],
+      "secrets": [
+        {
+          "name": "HUGGING_FACE_TOKEN",
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:YOUR_ACCOUNT_ID:secret:ai-video-translation/huggingface-token:token::"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/ai-video-translation",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      },
+      "healthCheck": {
+        "command": ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"],
+        "interval": 30,
+        "timeout": 30,
+        "retries": 3,
+        "startPeriod": 60
+      },
+      "mountPoints": [
+        {
+          "sourceVolume": "tmp-storage",
+          "containerPath": "/tmp",
+          "readOnly": false
+        }
+      ]
+    }
+  ],
+  "volumes": [
+    {
+      "name": "tmp-storage",
+      "host": {}
+    }
+  ]
+} 

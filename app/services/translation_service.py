@@ -23,8 +23,8 @@ class TranslationRequest:
     tts: str = "mms"
     stt: str = "auto"
     translator: str = "nllb"
-    translator_model: str = "nllb-200-1.3B"
-    stt_model: str = "medium"
+    translator_model: str = "nllb-200-distilled-600M"
+    stt_model: str = "tiny"
     output_directory: Optional[str] = None
 
 
