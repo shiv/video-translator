@@ -41,9 +41,3 @@ volumes:
 networks:
   default:
     name: ai-video-translation-network 
-
-logging:
-  driver: "json-file"
-  options:
-    max-size: "10m"
-    max-file: "3"
